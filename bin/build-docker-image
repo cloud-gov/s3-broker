@@ -1,0 +1,24 @@
+#!/bin/bash
+
+set -e
+
+echo -e "\n Cleaning S3 Service Broker Docker image..."
+docker rmi apefactory/s3-broker || true
+
+echo -e "\n Cleaning Builder Docker image..."
+docker rmi apefactory/s3-broker-builder || true
+
+echo -e "\n Creating Builder Docker image..."
+docker build -t apefactory/s3-broker-builder .
+
+echo -e "\n Creating S3 Service Broker Docker image..."
+docker run -ti --rm --name s3-broker-builder \
+       -e DOCKER_HOST=${DOCKER_HOST} \
+       -e DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY} \
+       -e DOCKER_CERT_PATH=${DOCKER_CERT_PATH} \
+       -v ${DOCKER_CERT_PATH}:${DOCKER_CERT_PATH} \
+       -v $(which docker):$(which docker) \
+       apefactory/s3-broker-builder
+
+echo -e "\n Cleaning Builder Docker image..."
+docker rmi apefactory/s3-broker-builder

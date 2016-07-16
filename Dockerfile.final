@@ -1,0 +1,13 @@
+FROM scratch
+MAINTAINER ape factory GmbH
+
+# Add files
+ADD s3-broker /s3-broker
+ADD config.json /config.json
+
+# Command to run
+ENTRYPOINT ["/s3-broker"]
+CMD ["--config=/config.json"]
+
+# Expose listen ports
+EXPOSE 3000

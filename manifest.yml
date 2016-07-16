@@ -1,0 +1,9 @@
+applications:
+  - name: s3-broker
+    memory: 256M
+    disk_quota: 256M
+    buildpack: https://github.com/cloudfoundry/go-buildpack.git#v1.7.7
+    env:
+      AWS_ACCESS_KEY_ID: "your-aws-access-key-id"
+      AWS_SECRET_ACCESS_KEY: "your-aws-secret-access-key"
+      GO15VENDOREXPERIMENT: 0

@@ -1,0 +1,10 @@
+{
+	"ImportPath": "github.com/apefactory/s3-broker",
+	"GoVersion": "go1.6.2",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+
+	]
+}

@@ -1,0 +1,31 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "manageBucketsAndObjectsInBuckets",
+      "Effect": "Allow",
+      "Action": [
+        "s3:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "manageUsersForBinding",
+      "Action": [
+        "iam:GetUser",
+        "iam:CreateUser",
+        "iam:DeleteUser",
+        "iam:ListAccessKeys",
+        "iam:CreateAccessKey",
+        "iam:DeleteAccessKey",
+        "iam:CreatePolicy",
+        "iam:DeletePolicy",
+        "iam:ListAttachedUserPolicies",
+        "iam:AttachUserPolicy",
+        "iam:DetachUserPolicy"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    }
+  ]
+}

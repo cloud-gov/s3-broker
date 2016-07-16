@@ -1,0 +1,60 @@
+{
+  "log_level": "DEBUG",
+  "username": "username",
+  "password": "password",
+  "s3_config": {
+    "region": "us-east-1",
+    "cache_prefix": "cf",
+    "allow_user_provision_parameters": false,
+    "allow_user_update_parameters": false,
+    "catalog": {
+      "services": [
+        {
+          "id": "98FF26D0-2E01-11E5-9184-FEFF819CDC9F",
+          "name": "aws-s3",
+          "description": "Amazon Simple Storage Service (S3)",
+          "bindable": true,
+          "tags": [
+            "AWS",
+             "S3",
+             "object-storage"
+          ],
+          "metadata": {
+            "displayName": "Amazon Simple Storage Service (S3)",
+            "imageUrl": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBxAQEhITEhIVFhQVFR0WFxgXFhQYFBcQGBgWFhgYGRUYHCggGB4mGxYUITEhJSkrLi86Fx8zODMtNygtLisBCgoKDg0OGxAQGiskICYtNywsLTIsLjcvLCwsLSwsLCw3LSwsLDQsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLP/AABEIANAA0AMBEQACEQEDEQH/xAAbAAEAAwEBAQEAAAAAAAAAAAAABAUGBwMBAv/EAEYQAAEDAgMFBAYGCAMJAQAAAAEAAgMEEQUSIQYHEzFBIlFhkRQjMnFygRUzobHB0TQ1QlJidILCc5KyFhclQ1ST0vDxCP/EABsBAQADAQEBAQAAAAAAAAAAAAABBAUDBgIH/8QANxEBAAIBAgMFBQUHBQAAAAAAAAECAwQRBRIhEzFRYXEyMzRygQYiQbHRJDVCYpHB4RQjQ1Kh/9oADAMBAAIRAxEAPwDuKAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIPhKiZiBU1uMmPThu97tAsPWcZnBPL2U+s9IXcOj5435oR4MfJNjHf4Tr5Kph+0F7W2tj3+X9HW+giO639VzBLmF7EeBFivRYsvaV32mPKWfavLO2+7yrKzhi+RzvhGnmuGq1nYV5uSbejpixc87bxHqqHbQuvowW7idVg2+0V9/dxt69fyXY4fG3tLOhxDi/8tw8Ty81s6PiP+p/45jz/D+qpm0/Z/xRKcCtLdXfUBAQEBAQEBAQEBAQEBAQEBAQU+0h9W34/wACsH7QTMYKzH/b+0r2hje87+CohxOVotmzDucLrz+LiupxxtM80eE9V6+lx26xG0+SdidY6J2SMNaLA6AXuVqcS1mTS5OywRFY233iOvVX0+GMtea+8vDBpHOnaXEk2PM36KrwjLfLrIm9pnpPe6au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oB9rTp4+KDwpcFxXD5quTCn09VTzTOe5pLS4PJJLDrzF7c+5Bpt1+J0tdSOy0kcDoZHRyRNb2BI4dotuL6g2N+4hBs6ajiivkY1ubnlAF+Z1t4k+aD3QEHyyDzMDdeyNRY6cwuU4aTMztHXpPnD657eL9tYBoAB7l91pWsbVjaHzMzPe/S+gQEGf232XbilK6ndIY7uDmvDQ4tc0/uki9xcc+qCr2k3dwVsdBGZCxtGQBZoPEiszMw66XyDXXqgl7a7Ew4nwnmR8M8J9XNH7TdQbEdRcX6IImze76OlklnmqZampkYY+LLa7WEWOVutvNBQRbo5YI+FS4nNFHIwNqG8MESkaZgM3Y00tqg21JsnSx0PoAbeDIWEH2jfm4nvvqgxX+6yt4fov0vL6Fy4fCGfJ+7mzWt8reCC42h3cRyimfRzupZ6VgjjkaM14xyDhcX6636lB44Vu3cz0qWpq3VFXUQuh4rmACNjgRZrb/ig0+yGCGgpIaYycQxNtmy5b639m5t5oKbEtgIp8TixEykcMAmLICHSNBDXZ76cx06BBNxbZJtRiFLXGUg07HN4eUEPzXGrr6cz0KDJ1W6eUGWKlxGSCjmdmkgDM1u9rXZgLfLzQX+0e7ymqqWnp43OgdTfUSt1ew6XvyvcgE8tQCgh4Bu+mZVR1eIVrquWEWhBZkYz+Lmbny+aCJPu0qIJZXYbiL6SOZ2Z8XDD2hx6sOYW6/mg1OxWykWFwcGNxeXOL5JHaOfIbAkjpoAg0CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg//9k=",
+            "longDescription": "Amazon Simple Storage Service (Amazon S3), provides developers and IT teams with secure, durable, highly-scalable object storage.",
+            "providerDisplayName": "Amazon Web Services",
+            "documentationUrl": "https://aws.amazon.com/documentation/s3/",
+            "supportUrl": "https://forums.aws.amazon.com/forum.jspa?forumID=24"
+          },
+          "plan_updateable": false,
+          "plans": [
+            {
+              "id": "EAAD05D8-2E01-11E5-9184-FEFF819CDC9F",
+              "name": "default",
+              "description": "Provides a single S3 bucket with unlimited storage.",
+              "metadata": {
+                "costs": [
+                  {
+                    "amount": {
+                      "usd": 0.0300
+                    },
+                    "unit": "Per GB"
+                  }
+                ],
+                "bullets": [
+                  "Single S3 bucket",
+                  "Unlimited storage, unlimited number of objects."
+                ]
+              },
+              "free": false,
+              "s3_properties": {
+
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
