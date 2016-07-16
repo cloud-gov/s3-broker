@@ -4,7 +4,7 @@
   "password": "password",
   "s3_config": {
     "region": "us-east-1",
-    "cache_prefix": "cf",
+    "bucket_prefix": "cf",
     "allow_user_provision_parameters": false,
     "allow_user_update_parameters": false,
     "catalog": {
