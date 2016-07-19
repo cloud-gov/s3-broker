@@ -455,7 +455,7 @@ var _ = Describe("IAM User", func() {
 
 			createPolicyInput = &iam.CreatePolicyInput{
 				PolicyName:     aws.String(policyName),
-				PolicyDocument: aws.String("{\"Version\":\"2012-10-17\",\"Id\":\"" + policyName + "\",\"Statement\":[{\"Sid\":\"1\",\"Effect\":\"" + effect + "\",\"Action\":\"" + action + "\",\"Resource\":\"" + resource + "\"}]}"),
+				PolicyDocument: aws.String("{\"Version\":\"2012-10-17\",\"Id\":\"" + policyName + "\",\"Statement\":[{\"Sid\":\"1\",\"Effect\":\"" + effect + "\",\"Action\":\"" + action + "\",\"Resource\":\"" + resource + "\"},{\"Sid\":\"2\",\"Effect\":\"" + effect + "\",\"Action\":\"" + action + "\",\"Resource\":\"" + resource + "/*\"}]}"),
 			}
 			createPolicyError = nil
 		})
