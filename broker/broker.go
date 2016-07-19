@@ -43,6 +43,7 @@ func New(
 		allowUserUpdateParameters:    config.AllowUserUpdateParameters,
 		catalog:                      config.Catalog,
 		bucket:                 			bucket,
+		user:                         user,
 		logger:                       logger.Session("broker"),
 	}
 }
