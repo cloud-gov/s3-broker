@@ -76,9 +76,6 @@ func (b *S3Broker) Provision(instanceID string, details brokerapi.ProvisionDetai
 	})
 
 	provisioningResponse := brokerapi.ProvisioningResponse{}
-	if !acceptsIncomplete {
-		return provisioningResponse, false, brokerapi.ErrAsyncRequired
-	}
 
 	provisionParameters := ProvisionParameters{}
 	if b.allowUserProvisionParameters {
@@ -107,10 +104,6 @@ func (b *S3Broker) Update(instanceID string, details brokerapi.UpdateDetails, ac
 		detailsLogKey:           details,
 		acceptsIncompleteLogKey: acceptsIncomplete,
 	})
-
-	if !acceptsIncomplete {
-		return false, brokerapi.ErrAsyncRequired
-	}
 
 	updateParameters := UpdateParameters{}
 	if b.allowUserUpdateParameters {
@@ -141,7 +134,7 @@ func (b *S3Broker) Update(instanceID string, details brokerapi.UpdateDetails, ac
 		return false, err
 	}
 
-	return true, nil
+	return false, nil
 }
 
 func (b *S3Broker) Deprovision(instanceID string, details brokerapi.DeprovisionDetails, acceptsIncomplete bool) (bool, error) {
@@ -151,10 +144,6 @@ func (b *S3Broker) Deprovision(instanceID string, details brokerapi.DeprovisionD
 		acceptsIncompleteLogKey: acceptsIncomplete,
 	})
 
-	if !acceptsIncomplete {
-		return false, brokerapi.ErrAsyncRequired
-	}
-
 	if err := b.bucket.Delete(b.bucketName(instanceID)); err != nil {
 		if err == awss3.ErrBucketDoesNotExist {
 			return false, brokerapi.ErrInstanceDoesNotExist
@@ -162,7 +151,7 @@ func (b *S3Broker) Deprovision(instanceID string, details brokerapi.DeprovisionD
 		return false, err
 	}
 
-	return true, nil
+	return false, nil
 }
 
 func (b *S3Broker) Bind(instanceID, bindingID string, details brokerapi.BindDetails) (brokerapi.BindingResponse, error) {
@@ -186,10 +175,6 @@ func (b *S3Broker) Bind(instanceID, bindingID string, details brokerapi.BindDeta
 	var accessKeyID, secretAccessKey string
 	var policyARN string
 	var err error
-
-	if !service.Bindable {
-		return bindingResponse, brokerapi.ErrInstanceNotBindable
-	}
 
   bucketDetails, err := b.bucket.Describe(b.bucketName(instanceID))
 	if err != nil {
