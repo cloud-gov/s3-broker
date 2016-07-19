@@ -153,7 +153,7 @@ var _ = Describe("ServicePlan", func() {
 			Description:   "Plan-1 description",
 			Metadata:      &ServicePlanMetadata{},
 			Free:          true,
-			ElastiCacheProperties: ElastiCacheProperties{},
+			S3Properties: S3Properties{},
 		}
 	)
 
