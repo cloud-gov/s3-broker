@@ -11,8 +11,8 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/pivotal-golang/lager"
 
-	"github.com/apefactory/s3-broker/awsiam"
-	"github.com/apefactory/s3-broker/awss3"
+	"github.com/cloudfoundry-community/s3-broker/awsiam"
+	"github.com/cloudfoundry-community/s3-broker/awss3"
 )
 
 const instanceIDLogKey = "instance-id"

@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/apefactory/s3-broker/broker"
+	"github.com/cloudfoundry-community/s3-broker/broker"
 )
 
 type Config struct {

@@ -1,5 +1,5 @@
 {
-	"ImportPath": "github.com/apefactory/s3-broker",
+	"ImportPath": "github.com/cloudfoundry-community/s3-broker",
 	"GoVersion": "go1.6.2",
 	"Deps": [
 		{

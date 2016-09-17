@@ -4,7 +4,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	. "github.com/apefactory/s3-broker/broker"
+	. "github.com/cloudfoundry-community/s3-broker/broker"
 )
 
 var _ = Describe("Catalog", func() {
