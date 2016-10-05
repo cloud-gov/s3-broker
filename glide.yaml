@@ -1,0 +1,13 @@
+package: github.com/cloudfoundry-community/s3-broker
+import:
+- package: code.cloudfoundry.org/lager
+- package: github.com/aws/aws-sdk-go
+  version: ~1.4.12
+  subpackages:
+  - aws
+  - aws/awserr
+  - aws/session
+  - service/iam
+  - service/s3
+- package: github.com/mitchellh/mapstructure
+- package: github.com/pivotal-cf/brokerapi

@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/pivotal-golang/lager"
 )
 
 type UserPolicy struct {

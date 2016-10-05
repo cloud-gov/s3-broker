@@ -11,10 +11,10 @@ import (
 )
 
 type Config struct {
-	LogLevel  string           `json:"log_level"`
-	Username  string           `json:"username"`
-	Password  string           `json:"password"`
-  S3Config broker.Config `json:"s3_config"`
+	LogLevel string        `json:"log_level"`
+	Username string        `json:"username"`
+	Password string        `json:"password"`
+	S3Config broker.Config `json:"s3_config"`
 }
 
 func LoadConfig(configFile string) (config *Config, err error) {

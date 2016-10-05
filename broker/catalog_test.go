@@ -5,6 +5,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	. "github.com/cloudfoundry-community/s3-broker/broker"
+	"github.com/pivotal-cf/brokerapi"
 )
 
 var _ = Describe("Catalog", func() {
@@ -89,11 +90,11 @@ var _ = Describe("Service", func() {
 			Description:     "Service 1 description",
 			Bindable:        true,
 			Tags:            []string{"service"},
-			Metadata:        &ServiceMetadata{},
-			Requires:        []string{"syslog"},
-			PlanUpdateable:  true,
+			Metadata:        &brokerapi.ServiceMetadata{},
+			Requires:        []brokerapi.RequiredPermission{},
+			PlanUpdatable:   true,
 			Plans:           []ServicePlan{},
-			DashboardClient: &DashboardClient{},
+			DashboardClient: &brokerapi.ServiceDashboardClient{},
 		}
 	)
 
@@ -148,11 +149,11 @@ var _ = Describe("ServicePlan", func() {
 		servicePlan ServicePlan
 
 		validServicePlan = ServicePlan{
-			ID:            "Plan-1",
-			Name:          "Plan 1",
-			Description:   "Plan-1 description",
-			Metadata:      &ServicePlanMetadata{},
-			Free:          true,
+			ID:           "Plan-1",
+			Name:         "Plan 1",
+			Description:  "Plan-1 description",
+			Metadata:     &brokerapi.ServicePlanMetadata{},
+			Free:         true,
 			S3Properties: S3Properties{},
 		}
 	)

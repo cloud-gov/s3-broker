@@ -4,14 +4,14 @@ import (
 	"errors"
 	"fmt"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/pivotal-golang/lager"
 )
 
 type S3Bucket struct {
-	s3svc *s3.S3
+	s3svc  *s3.S3
 	logger lager.Logger
 }
 
@@ -20,7 +20,7 @@ func NewS3Bucket(
 	logger lager.Logger,
 ) *S3Bucket {
 	return &S3Bucket{
-		s3svc: s3svc,
+		s3svc:  s3svc,
 		logger: logger.Session("s3-bucket"),
 	}
 }
@@ -49,7 +49,7 @@ func (s *S3Bucket) Create(bucketName string, bucketDetails BucketDetails) (strin
 }
 
 func (s *S3Bucket) Modify(bucketName string, bucketDetails BucketDetails) error {
-  // TODO Implement modifx
+	// TODO Implement modifx
 	return nil
 }
 
@@ -82,14 +82,14 @@ func (s *S3Bucket) Delete(bucketName string) error {
 func (s3 *S3Bucket) buildBucketDetails(bucketName string, attributes map[string]string) BucketDetails {
 	bucketDetails := BucketDetails{
 		BucketName: bucketName,
-		ARN: fmt.Sprintf("arn:aws:s3:::%s", bucketName),
+		ARN:        fmt.Sprintf("arn:aws:s3:::%s", bucketName),
 	}
 	return bucketDetails
 }
 
 func (s *S3Bucket) buildCreateBucketInput(bucketName string, bucketDetails BucketDetails) *s3.CreateBucketInput {
 	createBucketInput := &s3.CreateBucketInput{
-		Bucket:  aws.String(bucketName),
+		Bucket: aws.String(bucketName),
 	}
 	return createBucketInput
 }

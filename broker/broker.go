@@ -4,12 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-//	"strings"
 	"time"
 
-	"github.com/frodenas/brokerapi"
+	"code.cloudfoundry.org/lager"
 	"github.com/mitchellh/mapstructure"
-	"github.com/pivotal-golang/lager"
+	"github.com/pivotal-cf/brokerapi"
 
 	"github.com/cloudfoundry-community/s3-broker/awsiam"
 	"github.com/cloudfoundry-community/s3-broker/awss3"
@@ -31,10 +30,14 @@ type S3Broker struct {
 	logger                       lager.Logger
 }
 
+type CatalogExternal struct {
+	Services []brokerapi.Service `json:"services"`
+}
+
 func New(
 	config Config,
 	bucket awss3.Bucket,
-	user   awsiam.User,
+	user awsiam.User,
 	logger lager.Logger,
 ) *S3Broker {
 	return &S3Broker{
@@ -42,150 +45,138 @@ func New(
 		allowUserProvisionParameters: config.AllowUserProvisionParameters,
 		allowUserUpdateParameters:    config.AllowUserUpdateParameters,
 		catalog:                      config.Catalog,
-		bucket:                 			bucket,
+		bucket:                       bucket,
 		user:                         user,
 		logger:                       logger.Session("broker"),
 	}
 }
 
-func (b *S3Broker) Services() brokerapi.CatalogResponse {
-	catalogResponse := brokerapi.CatalogResponse{}
-
+func (b *S3Broker) Services() []brokerapi.Service {
 	brokerCatalog, err := json.Marshal(b.catalog)
 	if err != nil {
 		b.logger.Error("marshal-error", err)
-		return catalogResponse
+		return []brokerapi.Service{}
 	}
 
-	apiCatalog := brokerapi.Catalog{}
+	apiCatalog := CatalogExternal{}
 	if err = json.Unmarshal(brokerCatalog, &apiCatalog); err != nil {
 		b.logger.Error("unmarshal-error", err)
-		return catalogResponse
+		return []brokerapi.Service{}
 	}
 
-	catalogResponse.Services = apiCatalog.Services
-
-	return catalogResponse
+	return apiCatalog.Services
 }
 
-func (b *S3Broker) Provision(instanceID string, details brokerapi.ProvisionDetails, acceptsIncomplete bool) (brokerapi.ProvisioningResponse, bool, error) {
+func (b *S3Broker) Provision(
+	instanceID string,
+	details brokerapi.ProvisionDetails,
+	asyncAllowed bool,
+) (brokerapi.ProvisionedServiceSpec, error) {
 	b.logger.Debug("provision", lager.Data{
 		instanceIDLogKey:        instanceID,
 		detailsLogKey:           details,
-		acceptsIncompleteLogKey: acceptsIncomplete,
+		acceptsIncompleteLogKey: asyncAllowed,
 	})
-
-	provisioningResponse := brokerapi.ProvisioningResponse{}
 
 	provisionParameters := ProvisionParameters{}
 	if b.allowUserProvisionParameters {
-		if err := mapstructure.Decode(details.Parameters, &provisionParameters); err != nil {
-			return provisioningResponse, false, err
+		if err := mapstructure.Decode(details.RawParameters, &provisionParameters); err != nil {
+			return brokerapi.ProvisionedServiceSpec{}, err
 		}
 	}
 
 	servicePlan, ok := b.catalog.FindServicePlan(details.PlanID)
 	if !ok {
-		return provisioningResponse, false, fmt.Errorf("Service Plan '%s' not found", details.PlanID)
+		return brokerapi.ProvisionedServiceSpec{}, fmt.Errorf("Service Plan '%s' not found", details.PlanID)
 	}
 
 	var err error
 	instance := b.createBucket(instanceID, servicePlan, provisionParameters, details)
 	if _, err = b.bucket.Create(b.bucketName(instanceID), *instance); err != nil {
-		return provisioningResponse, false, err
+		return brokerapi.ProvisionedServiceSpec{}, err
 	}
 
-	return provisioningResponse, false, nil
+	return brokerapi.ProvisionedServiceSpec{IsAsync: true}, nil
 }
 
-func (b *S3Broker) Update(instanceID string, details brokerapi.UpdateDetails, acceptsIncomplete bool) (bool, error) {
+func (b *S3Broker) Update(
+	instanceID string,
+	details brokerapi.UpdateDetails,
+	asyncAllowed bool,
+) (brokerapi.UpdateServiceSpec, error) {
 	b.logger.Debug("update", lager.Data{
 		instanceIDLogKey:        instanceID,
 		detailsLogKey:           details,
-		acceptsIncompleteLogKey: acceptsIncomplete,
+		acceptsIncompleteLogKey: asyncAllowed,
 	})
 
 	updateParameters := UpdateParameters{}
 	if b.allowUserUpdateParameters {
 		if err := mapstructure.Decode(details.Parameters, &updateParameters); err != nil {
-			return false, err
+			return brokerapi.UpdateServiceSpec{}, err
 		}
-	}
-
-	service, ok := b.catalog.FindService(details.ServiceID)
-	if !ok {
-		return false, fmt.Errorf("Service '%s' not found", details.ServiceID)
-	}
-
-	if !service.PlanUpdateable {
-		return false, brokerapi.ErrInstanceNotUpdateable
 	}
 
 	servicePlan, ok := b.catalog.FindServicePlan(details.PlanID)
 	if !ok {
-		return false, fmt.Errorf("Service Plan '%s' not found", details.PlanID)
+		return brokerapi.UpdateServiceSpec{}, fmt.Errorf("Service Plan '%s' not found", details.PlanID)
 	}
 
 	instance := b.modifyBucket(instanceID, servicePlan, updateParameters, details)
 	if err := b.bucket.Modify(b.bucketName(instanceID), *instance); err != nil {
 		if err == awss3.ErrBucketDoesNotExist {
-			return false, brokerapi.ErrInstanceDoesNotExist
+			return brokerapi.UpdateServiceSpec{}, brokerapi.ErrInstanceDoesNotExist
 		}
-		return false, err
+		return brokerapi.UpdateServiceSpec{}, err
 	}
 
-	return false, nil
+	return brokerapi.UpdateServiceSpec{IsAsync: false}, nil
 }
 
-func (b *S3Broker) Deprovision(instanceID string, details brokerapi.DeprovisionDetails, acceptsIncomplete bool) (bool, error) {
+func (b *S3Broker) Deprovision(
+	instanceID string,
+	details brokerapi.DeprovisionDetails,
+	asyncAllowed bool,
+) (brokerapi.DeprovisionServiceSpec, error) {
 	b.logger.Debug("deprovision", lager.Data{
 		instanceIDLogKey:        instanceID,
 		detailsLogKey:           details,
-		acceptsIncompleteLogKey: acceptsIncomplete,
+		acceptsIncompleteLogKey: asyncAllowed,
 	})
 
 	if err := b.bucket.Delete(b.bucketName(instanceID)); err != nil {
 		if err == awss3.ErrBucketDoesNotExist {
-			return false, brokerapi.ErrInstanceDoesNotExist
+			return brokerapi.DeprovisionServiceSpec{}, brokerapi.ErrInstanceDoesNotExist
 		}
-		return false, err
+		return brokerapi.DeprovisionServiceSpec{}, err
 	}
 
-	return false, nil
+	return brokerapi.DeprovisionServiceSpec{IsAsync: false}, nil
 }
 
-func (b *S3Broker) Bind(instanceID, bindingID string, details brokerapi.BindDetails) (brokerapi.BindingResponse, error) {
+func (b *S3Broker) Bind(instanceID, bindingID string, details brokerapi.BindDetails) (brokerapi.Binding, error) {
 	b.logger.Debug("bind", lager.Data{
 		instanceIDLogKey: instanceID,
 		bindingIDLogKey:  bindingID,
 		detailsLogKey:    details,
 	})
 
-	bindingResponse := brokerapi.BindingResponse{}
-
-	service, ok := b.catalog.FindService(details.ServiceID)
-	if !ok {
-		return bindingResponse, fmt.Errorf("Service '%s' not found", details.ServiceID)
-	}
-
-	if !service.Bindable {
-		return bindingResponse, brokerapi.ErrInstanceNotBindable
-	}
+	binding := brokerapi.Binding{}
 
 	var accessKeyID, secretAccessKey string
 	var policyARN string
 	var err error
 
-  bucketDetails, err := b.bucket.Describe(b.bucketName(instanceID))
+	bucketDetails, err := b.bucket.Describe(b.bucketName(instanceID))
 	if err != nil {
 		if err == awss3.ErrBucketDoesNotExist {
-			return bindingResponse, brokerapi.ErrInstanceDoesNotExist
+			return binding, brokerapi.ErrInstanceDoesNotExist
 		}
-		return bindingResponse, err
+		return binding, err
 	}
 
 	if _, err = b.user.Create(b.userName(bindingID)); err != nil {
-		return bindingResponse, err
+		return binding, err
 	}
 	defer func() {
 		if err != nil {
@@ -201,26 +192,25 @@ func (b *S3Broker) Bind(instanceID, bindingID string, details brokerapi.BindDeta
 
 	accessKeyID, secretAccessKey, err = b.user.CreateAccessKey(b.userName(bindingID))
 	if err != nil {
-		return bindingResponse, err
+		return binding, err
 	}
 
 	policyARN, err = b.user.CreatePolicy(b.policyName(bindingID), "Allow", "s3:*", bucketDetails.ARN)
 	if err != nil {
-		return bindingResponse, err
+		return binding, err
 	}
 
 	if err = b.user.AttachUserPolicy(b.userName(bindingID), policyARN); err != nil {
-		return bindingResponse, err
+		return binding, err
 	}
 
-	bindingResponse.Credentials = &brokerapi.CredentialsHash{
-		Username: accessKeyID,
-		Password: secretAccessKey,
-		Name:     bucketDetails.BucketName,
+	binding.Credentials = map[string]string{
+		"username": accessKeyID,
+		"password": secretAccessKey,
+		"name":     bucketDetails.BucketName,
 	}
 
-	return bindingResponse, nil
-
+	return binding, nil
 }
 
 func (b *S3Broker) Unbind(instanceID, bindingID string, details brokerapi.UnbindDetails) error {
@@ -263,12 +253,12 @@ func (b *S3Broker) Unbind(instanceID, bindingID string, details brokerapi.Unbind
 	return nil
 }
 
-func (b *S3Broker) LastOperation(instanceID string) (brokerapi.LastOperationResponse, error) {
+func (b *S3Broker) LastOperation(instanceID, operationData string) (brokerapi.LastOperation, error) {
 	b.logger.Debug("last-operation", lager.Data{
 		instanceIDLogKey: instanceID,
 	})
 
-	return brokerapi.LastOperationResponse{}, errors.New("This broker does not support LastOperation")
+	return brokerapi.LastOperation{}, errors.New("This broker does not support LastOperation")
 }
 
 func (b *S3Broker) bucketName(instanceID string) string {
@@ -296,8 +286,7 @@ func (b *S3Broker) modifyBucket(instanceID string, servicePlan ServicePlan, upda
 }
 
 func (b *S3Broker) bucketFromPlan(servicePlan ServicePlan) *awss3.BucketDetails {
-	bucketDetails := &awss3.BucketDetails{
-	}
+	bucketDetails := &awss3.BucketDetails{}
 	return bucketDetails
 }
 

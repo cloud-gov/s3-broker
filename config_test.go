@@ -18,7 +18,7 @@ var _ = Describe("Config", func() {
 			Username: "broker-username",
 			Password: "broker-password",
 			S3Config: broker.Config{
-				Region:    "s3-region",
+				Region:       "s3-region",
 				BucketPrefix: "cf",
 			},
 		}

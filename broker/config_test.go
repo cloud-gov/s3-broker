@@ -12,7 +12,7 @@ var _ = Describe("Config", func() {
 		config Config
 
 		validConfig = Config{
-			Region:    "s3-region",
+			Region:       "s3-region",
 			BucketPrefix: "cf",
 			Catalog: Catalog{
 				[]Service{
