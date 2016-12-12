@@ -20,7 +20,9 @@ const detailsLogKey = "details"
 const acceptsIncompleteLogKey = "acceptsIncomplete"
 
 type S3Broker struct {
+	iamPath                      string
 	bucketPrefix                 string
+	awsPartition                 string
 	allowUserProvisionParameters bool
 	allowUserUpdateParameters    bool
 	allowUserBindParameters      bool
@@ -41,7 +43,9 @@ func New(
 	logger lager.Logger,
 ) *S3Broker {
 	return &S3Broker{
+		iamPath:                      config.IamPath,
 		bucketPrefix:                 config.BucketPrefix,
+		awsPartition:                 config.AwsPartition,
 		allowUserProvisionParameters: config.AllowUserProvisionParameters,
 		allowUserUpdateParameters:    config.AllowUserUpdateParameters,
 		catalog:                      config.Catalog,
@@ -96,7 +100,7 @@ func (b *S3Broker) Provision(
 		return brokerapi.ProvisionedServiceSpec{}, err
 	}
 
-	return brokerapi.ProvisionedServiceSpec{IsAsync: true}, nil
+	return brokerapi.ProvisionedServiceSpec{IsAsync: false}, nil
 }
 
 func (b *S3Broker) Update(
@@ -167,7 +171,7 @@ func (b *S3Broker) Bind(instanceID, bindingID string, details brokerapi.BindDeta
 	var policyARN string
 	var err error
 
-	bucketDetails, err := b.bucket.Describe(b.bucketName(instanceID))
+	bucketDetails, err := b.bucket.Describe(b.bucketName(instanceID), b.awsPartition)
 	if err != nil {
 		if err == awss3.ErrBucketDoesNotExist {
 			return binding, brokerapi.ErrInstanceDoesNotExist
@@ -175,7 +179,7 @@ func (b *S3Broker) Bind(instanceID, bindingID string, details brokerapi.BindDeta
 		return binding, err
 	}
 
-	if _, err = b.user.Create(b.userName(bindingID)); err != nil {
+	if _, err = b.user.Create(b.userName(bindingID), b.iamPath); err != nil {
 		return binding, err
 	}
 	defer func() {
@@ -195,7 +199,7 @@ func (b *S3Broker) Bind(instanceID, bindingID string, details brokerapi.BindDeta
 		return binding, err
 	}
 
-	policyARN, err = b.user.CreatePolicy(b.policyName(bindingID), "Allow", "s3:*", bucketDetails.ARN)
+	policyARN, err = b.user.CreatePolicy(b.policyName(bindingID), b.iamPath, "Allow", "s3:*", bucketDetails.ARN)
 	if err != nil {
 		return binding, err
 	}
@@ -231,7 +235,7 @@ func (b *S3Broker) Unbind(instanceID, bindingID string, details brokerapi.Unbind
 		}
 	}
 
-	userPolicies, err := b.user.ListAttachedUserPolicies(b.userName(bindingID))
+	userPolicies, err := b.user.ListAttachedUserPolicies(b.userName(bindingID), b.iamPath)
 	if err != nil {
 		return err
 	}

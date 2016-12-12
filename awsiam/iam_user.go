@@ -64,9 +64,10 @@ func (i *IAMUser) Describe(userName string) (UserDetails, error) {
 	return userDetails, nil
 }
 
-func (i *IAMUser) Create(userName string) (string, error) {
+func (i *IAMUser) Create(userName, iamPath string) (string, error) {
 	createUserInput := &iam.CreateUserInput{
 		UserName: aws.String(userName),
+		Path:     stringOrNil(iamPath),
 	}
 	i.logger.Debug("create-user", lager.Data{"input": createUserInput})
 
@@ -146,7 +147,7 @@ func (i *IAMUser) CreateAccessKey(userName string) (string, string, error) {
 	return aws.StringValue(createAccessKeyOutput.AccessKey.AccessKeyId), aws.StringValue(createAccessKeyOutput.AccessKey.SecretAccessKey), nil
 }
 
-func (i *IAMUser) DeleteAccessKey(userName string, accessKeyID string) error {
+func (i *IAMUser) DeleteAccessKey(userName, accessKeyID string) error {
 	deleteAccessKeyInput := &iam.DeleteAccessKeyInput{
 		UserName:    aws.String(userName),
 		AccessKeyId: aws.String(accessKeyID),
@@ -166,7 +167,7 @@ func (i *IAMUser) DeleteAccessKey(userName string, accessKeyID string) error {
 	return nil
 }
 
-func (i *IAMUser) CreatePolicy(policyName string, effect string, action string, resource string) (string, error) {
+func (i *IAMUser) CreatePolicy(policyName, iamPath, effect, action, resource string) (string, error) {
 	policyDocument, err := i.buildUserPolicy(policyName, effect, action, resource)
 	if err != nil {
 		return "", err
@@ -175,6 +176,7 @@ func (i *IAMUser) CreatePolicy(policyName string, effect string, action string, 
 	createPolicyInput := &iam.CreatePolicyInput{
 		PolicyName:     aws.String(policyName),
 		PolicyDocument: aws.String(policyDocument),
+		Path:           stringOrNil(iamPath),
 	}
 	i.logger.Debug("create-policy", lager.Data{"input": createPolicyInput})
 
@@ -210,11 +212,12 @@ func (i *IAMUser) DeletePolicy(policyARN string) error {
 	return nil
 }
 
-func (i *IAMUser) ListAttachedUserPolicies(userName string) ([]string, error) {
+func (i *IAMUser) ListAttachedUserPolicies(userName, iamPath string) ([]string, error) {
 	var userPolicies []string
 
 	listAttachedUserPoliciesInput := &iam.ListAttachedUserPoliciesInput{
-		UserName: aws.String(userName),
+		UserName:   aws.String(userName),
+		PathPrefix: stringOrNil(iamPath),
 	}
 	i.logger.Debug("list-attached-user-policies", lager.Data{"input": listAttachedUserPoliciesInput})
 
@@ -301,4 +304,11 @@ func (i *IAMUser) buildUserPolicy(policyID string, effect string, action string,
 	}
 
 	return string(policy), nil
+}
+
+func stringOrNil(v string) *string {
+	if v != "" {
+		return &v
+	}
+	return nil
 }

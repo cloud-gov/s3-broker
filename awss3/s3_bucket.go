@@ -25,10 +25,10 @@ func NewS3Bucket(
 	}
 }
 
-func (s *S3Bucket) Describe(bucketName string) (BucketDetails, error) {
+func (s *S3Bucket) Describe(bucketName, partition string) (BucketDetails, error) {
 	//bucketDetails := BucketDetails{}
 
-	return s.buildBucketDetails(bucketName, nil), nil
+	return s.buildBucketDetails(bucketName, partition, nil), nil
 }
 
 func (s *S3Bucket) Create(bucketName string, bucketDetails BucketDetails) (string, error) {
@@ -79,10 +79,10 @@ func (s *S3Bucket) Delete(bucketName string) error {
 	return nil
 }
 
-func (s3 *S3Bucket) buildBucketDetails(bucketName string, attributes map[string]string) BucketDetails {
+func (s3 *S3Bucket) buildBucketDetails(bucketName, partition string, attributes map[string]string) BucketDetails {
 	bucketDetails := BucketDetails{
 		BucketName: bucketName,
-		ARN:        fmt.Sprintf("arn:aws:s3:::%s", bucketName),
+		ARN:        fmt.Sprintf("arn:%s:s3:::%s", partition, bucketName),
 	}
 	return bucketDetails
 }

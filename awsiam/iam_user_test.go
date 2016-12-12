@@ -20,6 +20,7 @@ import (
 var _ = Describe("IAM User", func() {
 	var (
 		userName string
+		iamPath  string
 
 		awsSession *session.Session
 		iamsvc     *iam.IAM
@@ -33,6 +34,7 @@ var _ = Describe("IAM User", func() {
 
 	BeforeEach(func() {
 		userName = "iam-user"
+		iamPath = "/path/"
 	})
 
 	JustBeforeEach(func() {
@@ -128,6 +130,7 @@ var _ = Describe("IAM User", func() {
 		BeforeEach(func() {
 			createUserInput = &iam.CreateUserInput{
 				UserName: aws.String(userName),
+				Path:     aws.String(iamPath),
 			}
 			createUserError = nil
 		})
@@ -149,7 +152,7 @@ var _ = Describe("IAM User", func() {
 		})
 
 		It("creates the User", func() {
-			userARN, err := user.Create(userName)
+			userARN, err := user.Create(userName, iamPath)
 			Expect(userARN).To(Equal("user-arn"))
 			Expect(err).ToNot(HaveOccurred())
 		})
@@ -160,7 +163,7 @@ var _ = Describe("IAM User", func() {
 			})
 
 			It("returns the proper error", func() {
-				_, err := user.Create(userName)
+				_, err := user.Create(userName, iamPath)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal("operation failed"))
 			})
@@ -171,7 +174,7 @@ var _ = Describe("IAM User", func() {
 				})
 
 				It("returns the proper error", func() {
-					_, err := user.Create(userName)
+					_, err := user.Create(userName, iamPath)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(Equal("code: message"))
 				})
@@ -454,6 +457,7 @@ var _ = Describe("IAM User", func() {
 			}
 
 			createPolicyInput = &iam.CreatePolicyInput{
+				Path:           aws.String(iamPath),
 				PolicyName:     aws.String(policyName),
 				PolicyDocument: aws.String("{\"Version\":\"2012-10-17\",\"Id\":\"" + policyName + "\",\"Statement\":[{\"Sid\":\"1\",\"Effect\":\"" + effect + "\",\"Action\":\"" + action + "\",\"Resource\":\"" + resource + "\"},{\"Sid\":\"2\",\"Effect\":\"" + effect + "\",\"Action\":\"" + action + "\",\"Resource\":\"" + resource + "/*\"}]}"),
 			}
@@ -475,7 +479,7 @@ var _ = Describe("IAM User", func() {
 		})
 
 		It("creates the Access Key", func() {
-			policyARN, err := user.CreatePolicy(policyName, effect, action, resource)
+			policyARN, err := user.CreatePolicy(policyName, iamPath, effect, action, resource)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(policyARN).To(Equal("policy-arn"))
 		})
@@ -486,7 +490,7 @@ var _ = Describe("IAM User", func() {
 			})
 
 			It("returns the proper error", func() {
-				_, err := user.CreatePolicy(policyName, effect, action, resource)
+				_, err := user.CreatePolicy(policyName, iamPath, effect, action, resource)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal("operation failed"))
 			})
@@ -497,7 +501,7 @@ var _ = Describe("IAM User", func() {
 				})
 
 				It("returns the proper error", func() {
-					_, err := user.CreatePolicy(policyName, effect, action, resource)
+					_, err := user.CreatePolicy(policyName, iamPath, effect, action, resource)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(Equal("code: message"))
 				})
@@ -583,7 +587,8 @@ var _ = Describe("IAM User", func() {
 			}
 
 			listAttachedUserPoliciesInput = &iam.ListAttachedUserPoliciesInput{
-				UserName: aws.String(userName),
+				UserName:   aws.String(userName),
+				PathPrefix: aws.String(iamPath),
 			}
 			listAttachedUserPoliciesError = nil
 		})
@@ -603,7 +608,7 @@ var _ = Describe("IAM User", func() {
 		})
 
 		It("lists the Attached User Policies", func() {
-			attachedUserPolicies, err := user.ListAttachedUserPolicies(userName)
+			attachedUserPolicies, err := user.ListAttachedUserPolicies(userName, iamPath)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(attachedUserPolicies).To(Equal([]string{"user-policy-1", "user-policy-2"}))
 		})
@@ -614,7 +619,7 @@ var _ = Describe("IAM User", func() {
 			})
 
 			It("returns the proper error", func() {
-				_, err := user.ListAttachedUserPolicies(userName)
+				_, err := user.ListAttachedUserPolicies(userName, iamPath)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal("operation failed"))
 			})
@@ -625,7 +630,7 @@ var _ = Describe("IAM User", func() {
 				})
 
 				It("returns the proper error", func() {
-					_, err := user.ListAttachedUserPolicies(userName)
+					_, err := user.ListAttachedUserPolicies(userName, iamPath)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(Equal("code: message"))
 				})
