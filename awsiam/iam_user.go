@@ -67,7 +67,7 @@ func (i *IAMUser) Describe(userName string) (UserDetails, error) {
 func (i *IAMUser) Create(userName, iamPath string) (string, error) {
 	createUserInput := &iam.CreateUserInput{
 		UserName: aws.String(userName),
-		Path:     aws.String(iamPath),
+		Path:     stringOrNil(iamPath),
 	}
 	i.logger.Debug("create-user", lager.Data{"input": createUserInput})
 
@@ -176,7 +176,7 @@ func (i *IAMUser) CreatePolicy(policyName, iamPath, effect, action, resource str
 	createPolicyInput := &iam.CreatePolicyInput{
 		PolicyName:     aws.String(policyName),
 		PolicyDocument: aws.String(policyDocument),
-		Path:           aws.String(iamPath),
+		Path:           stringOrNil(iamPath),
 	}
 	i.logger.Debug("create-policy", lager.Data{"input": createPolicyInput})
 
@@ -217,7 +217,7 @@ func (i *IAMUser) ListAttachedUserPolicies(userName, iamPath string) ([]string, 
 
 	listAttachedUserPoliciesInput := &iam.ListAttachedUserPoliciesInput{
 		UserName:   aws.String(userName),
-		PathPrefix: aws.String(iamPath),
+		PathPrefix: stringOrNil(iamPath),
 	}
 	i.logger.Debug("list-attached-user-policies", lager.Data{"input": listAttachedUserPoliciesInput})
 
@@ -304,4 +304,11 @@ func (i *IAMUser) buildUserPolicy(policyID string, effect string, action string,
 	}
 
 	return string(policy), nil
+}
+
+func stringOrNil(v string) *string {
+	if v != "" {
+		return &v
+	}
+	return nil
 }
