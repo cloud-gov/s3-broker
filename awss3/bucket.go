@@ -5,7 +5,7 @@ import (
 )
 
 type Bucket interface {
-	Describe(bucketName string) (BucketDetails, error)
+	Describe(bucketName, partition string) (BucketDetails, error)
 	Create(bucketName string, details BucketDetails) (string, error)
 	Modify(bucketName string, details BucketDetails) error
 	Delete(bucketName string) error

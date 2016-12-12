@@ -20,6 +20,7 @@ var _ = Describe("Config", func() {
 			S3Config: broker.Config{
 				Region:       "s3-region",
 				BucketPrefix: "cf",
+				AwsPartition: "aws",
 			},
 		}
 	)
