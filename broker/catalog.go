@@ -1,6 +1,7 @@
 package broker
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/pivotal-cf/brokerapi"
@@ -33,6 +34,7 @@ type ServicePlan struct {
 }
 
 type S3Properties struct {
+	Policy json.RawMessage `json:"policy,omitempty"`
 }
 
 func (c Catalog) Validate() error {

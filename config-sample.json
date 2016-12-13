@@ -51,6 +51,39 @@
               "s3_properties": {
 
               }
+            },
+            {
+              "id": "16A19515-C2B9-4982-80BD-69BED6A86C85",
+              "name": "public",
+              "description": "Provides a single publicly accessible S3 bucket with unlimited storage.",
+              "metadata": {
+                "costs": [
+                  {
+                    "amount": {
+                      "usd": 0.0300
+                    },
+                    "unit": "Per GB"
+                  }
+                ],
+                "bullets": [
+                  "Single S3 bucket",
+                  "Unlimited storage, unlimited number of objects."
+                ]
+              },
+              "free": false,
+              "s3_properties": {
+                "policy": {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Principal": "*",
+                      "Action": ["s3:GetObject"],
+                      "Resource": ["arn:{{.AwsPartition}}:s3:::{{.BucketName}}/*"]
+                    }
+                  ]
+                }
+              }
             }
           ]
         }
