@@ -280,6 +280,8 @@ func (b *S3Broker) policyName(bindingID string) string {
 func (b *S3Broker) createBucket(instanceID string, servicePlan ServicePlan, provisionParameters ProvisionParameters, details brokerapi.ProvisionDetails) *awss3.BucketDetails {
 	bucketDetails := b.bucketFromPlan(servicePlan)
 	bucketDetails.Tags = b.bucketTags("Created", details.ServiceID, details.PlanID, details.OrganizationGUID, details.SpaceGUID)
+	bucketDetails.Policy = string(servicePlan.S3Properties.Policy)
+	bucketDetails.AwsPartition = b.awsPartition
 	return bucketDetails
 }
 

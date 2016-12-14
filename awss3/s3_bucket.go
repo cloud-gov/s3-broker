@@ -1,8 +1,10 @@
 package awss3
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"text/template"
 
 	"code.cloudfoundry.org/lager"
 	"github.com/aws/aws-sdk-go/aws"
@@ -44,6 +46,35 @@ func (s *S3Bucket) Create(bucketName string, bucketDetails BucketDetails) (strin
 		return "", err
 	}
 	s.logger.Debug("create-bucket", lager.Data{"output": createBucketOutput})
+
+	if len(bucketDetails.Policy) > 0 {
+		bucketDetails.BucketName = bucketName
+		tmpl, err := template.New("policy").Parse(bucketDetails.Policy)
+		if err != nil {
+			s.logger.Error("aws-s3-error", err)
+			return "", err
+		}
+		policy := bytes.Buffer{}
+		err = tmpl.Execute(&policy, bucketDetails)
+		if err != nil {
+			s.logger.Error("aws-s3-error", err)
+			return "", err
+		}
+		putPolicyInput := &s3.PutBucketPolicyInput{
+			Bucket: aws.String(bucketDetails.BucketName),
+			Policy: aws.String(policy.String()),
+		}
+		s.logger.Debug("put-bucket-policy", lager.Data{"input": putPolicyInput})
+		putPolicyOutput, err := s.s3svc.PutBucketPolicy(putPolicyInput)
+		if err != nil {
+			s.logger.Error("aws-s3-error", err)
+			if awsErr, ok := err.(awserr.Error); ok {
+				return "", errors.New(awsErr.Code() + ": " + awsErr.Message())
+			}
+			return "", err
+		}
+		s.logger.Debug("put-bucket-policy", lager.Data{"output": putPolicyOutput})
+	}
 
 	return aws.StringValue(createBucketOutput.Location), nil
 }

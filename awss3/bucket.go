@@ -12,10 +12,12 @@ type Bucket interface {
 }
 
 type BucketDetails struct {
-	BucketName string
-	ARN        string
-	Region     string
-	Tags       map[string]string
+	BucketName   string
+	ARN          string
+	Region       string
+	Policy       string
+	AwsPartition string
+	Tags         map[string]string
 }
 
 var (
