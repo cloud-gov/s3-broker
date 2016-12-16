@@ -28,9 +28,22 @@ func NewS3Bucket(
 }
 
 func (s *S3Bucket) Describe(bucketName, partition string) (BucketDetails, error) {
-	//bucketDetails := BucketDetails{}
+	getLocationInput := &s3.GetBucketLocationInput{
+		Bucket: aws.String(bucketName),
+	}
+	s.logger.Debug("get-bucket-location", lager.Data{"input": getLocationInput})
 
-	return s.buildBucketDetails(bucketName, partition, nil), nil
+	getLocationOutput, err := s.s3svc.GetBucketLocation(getLocationInput)
+	if err != nil {
+		s.logger.Error("aws-s3-error", err)
+		if awsErr, ok := err.(awserr.Error); ok {
+			return BucketDetails{}, errors.New(awsErr.Code() + ": " + awsErr.Message())
+		}
+		return BucketDetails{}, err
+	}
+	s.logger.Debug("get-bucket-location", lager.Data{"output": getLocationOutput})
+
+	return s.buildBucketDetails(bucketName, *getLocationOutput.LocationConstraint, partition, nil), nil
 }
 
 func (s *S3Bucket) Create(bucketName string, bucketDetails BucketDetails) (string, error) {
@@ -110,12 +123,12 @@ func (s *S3Bucket) Delete(bucketName string) error {
 	return nil
 }
 
-func (s3 *S3Bucket) buildBucketDetails(bucketName, partition string, attributes map[string]string) BucketDetails {
-	bucketDetails := BucketDetails{
+func (s3 *S3Bucket) buildBucketDetails(bucketName, region, partition string, attributes map[string]string) BucketDetails {
+	return BucketDetails{
 		BucketName: bucketName,
+		Region:     region,
 		ARN:        fmt.Sprintf("arn:%s:s3:::%s", partition, bucketName),
 	}
-	return bucketDetails
 }
 
 func (s *S3Bucket) buildCreateBucketInput(bucketName string, bucketDetails BucketDetails) *s3.CreateBucketInput {

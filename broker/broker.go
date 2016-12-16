@@ -211,6 +211,7 @@ func (b *S3Broker) Bind(instanceID, bindingID string, details brokerapi.BindDeta
 	binding.Credentials = map[string]string{
 		"username": accessKeyID,
 		"password": secretAccessKey,
+		"region":   bucketDetails.Region,
 		"name":     bucketDetails.BucketName,
 	}
 
