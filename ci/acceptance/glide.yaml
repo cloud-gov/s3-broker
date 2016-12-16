@@ -1,0 +1,11 @@
+package: github.com/cloudfoundry-community/s3-broker/ci/acceptance
+import:
+- package: github.com/aws/aws-sdk-go
+  version: ~1.6.4
+  subpackages:
+  - aws
+  - aws/credentials
+  - aws/session
+  - service/s3
+- package: github.com/cloudfoundry-community/go-cfenv
+  version: ~1.14.0
