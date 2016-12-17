@@ -55,10 +55,12 @@
                     {
                       "Action": [
                         "s3:DeleteBucketWebsite",
+                        "s3:GetBucketAcl",
                         "s3:GetBucketCORS",
                         "s3:GetBucketLocation",
                         "s3:GetBucketLogging",
                         "s3:GetBucketNotification",
+                        "s3:GetBucketPolicy",
                         "s3:GetBucketTagging",
                         "s3:GetBucketVersioning",
                         "s3:GetBucketWebsite",
@@ -124,10 +126,12 @@
                     {
                       "Action": [
                         "s3:DeleteBucketWebsite",
+                        "s3:GetBucketAcl",
                         "s3:GetBucketCORS",
                         "s3:GetBucketLocation",
                         "s3:GetBucketLogging",
                         "s3:GetBucketNotification",
+                        "s3:GetBucketPolicy",
                         "s3:GetBucketTagging",
                         "s3:GetBucketVersioning",
                         "s3:GetBucketWebsite",
