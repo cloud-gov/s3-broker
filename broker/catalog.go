@@ -2,6 +2,7 @@ package broker
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/pivotal-cf/brokerapi"
@@ -34,7 +35,8 @@ type ServicePlan struct {
 }
 
 type S3Properties struct {
-	Policy json.RawMessage `json:"policy,omitempty"`
+	IamPolicy    json.RawMessage `json:"iam_policy,omitempty"`
+	BucketPolicy json.RawMessage `json:"bucket_policy,omitempty"`
 }
 
 func (c Catalog) Validate() error {
@@ -112,5 +114,9 @@ func (sp ServicePlan) Validate() error {
 }
 
 func (eq S3Properties) Validate() error {
+	if len(eq.IamPolicy) == 0 {
+		return errors.New("Must provide a non-empty IAM Policy")
+	}
+
 	return nil
 }
