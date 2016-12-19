@@ -436,8 +436,7 @@ var _ = Describe("IAM User", func() {
 	var _ = Describe("CreatePolicy", func() {
 		var (
 			policyName string
-			effect     string
-			action     string
+			template   string
 			resource   string
 
 			createPolicy *iam.Policy
@@ -448,8 +447,17 @@ var _ = Describe("IAM User", func() {
 
 		BeforeEach(func() {
 			policyName = "policy-name"
-			effect = "effect"
-			action = "action"
+			template = `{
+	"Version": "2012-10-17",
+	"Id": "policy-name",
+	"Statement": [
+		{
+			"Effect": "effect",
+			"Action": "action",
+			"Resource": "{{.Resource}}"
+		}
+	]
+}`
 			resource = "resource"
 
 			createPolicy = &iam.Policy{
@@ -457,9 +465,19 @@ var _ = Describe("IAM User", func() {
 			}
 
 			createPolicyInput = &iam.CreatePolicyInput{
-				Path:           aws.String(iamPath),
-				PolicyName:     aws.String(policyName),
-				PolicyDocument: aws.String("{\"Version\":\"2012-10-17\",\"Id\":\"" + policyName + "\",\"Statement\":[{\"Sid\":\"1\",\"Effect\":\"" + effect + "\",\"Action\":\"" + action + "\",\"Resource\":\"" + resource + "\"},{\"Sid\":\"2\",\"Effect\":\"" + effect + "\",\"Action\":\"" + action + "\",\"Resource\":\"" + resource + "/*\"}]}"),
+				Path:       aws.String(iamPath),
+				PolicyName: aws.String(policyName),
+				PolicyDocument: aws.String(`{
+	"Version": "2012-10-17",
+	"Id": "policy-name",
+	"Statement": [
+		{
+			"Effect": "effect",
+			"Action": "action",
+			"Resource": "resource"
+		}
+	]
+}`),
 			}
 			createPolicyError = nil
 		})
@@ -479,7 +497,7 @@ var _ = Describe("IAM User", func() {
 		})
 
 		It("creates the Access Key", func() {
-			policyARN, err := user.CreatePolicy(policyName, iamPath, effect, action, resource)
+			policyARN, err := user.CreatePolicy(policyName, iamPath, template, resource)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(policyARN).To(Equal("policy-arn"))
 		})
@@ -490,7 +508,7 @@ var _ = Describe("IAM User", func() {
 			})
 
 			It("returns the proper error", func() {
-				_, err := user.CreatePolicy(policyName, iamPath, effect, action, resource)
+				_, err := user.CreatePolicy(policyName, iamPath, template, resource)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal("operation failed"))
 			})
@@ -501,7 +519,7 @@ var _ = Describe("IAM User", func() {
 				})
 
 				It("returns the proper error", func() {
-					_, err := user.CreatePolicy(policyName, iamPath, effect, action, resource)
+					_, err := user.CreatePolicy(policyName, iamPath, template, resource)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(Equal("code: message"))
 				})

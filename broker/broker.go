@@ -171,6 +171,11 @@ func (b *S3Broker) Bind(instanceID, bindingID string, details brokerapi.BindDeta
 	var policyARN string
 	var err error
 
+	servicePlan, ok := b.catalog.FindServicePlan(details.PlanID)
+	if !ok {
+		return binding, fmt.Errorf("Service Plan '%s' not found", details.PlanID)
+	}
+
 	bucketDetails, err := b.bucket.Describe(b.bucketName(instanceID), b.awsPartition)
 	if err != nil {
 		if err == awss3.ErrBucketDoesNotExist {
@@ -199,7 +204,7 @@ func (b *S3Broker) Bind(instanceID, bindingID string, details brokerapi.BindDeta
 		return binding, err
 	}
 
-	policyARN, err = b.user.CreatePolicy(b.policyName(bindingID), b.iamPath, "Allow", "s3:*", bucketDetails.ARN)
+	policyARN, err = b.user.CreatePolicy(b.policyName(bindingID), b.iamPath, string(servicePlan.S3Properties.IamPolicy), bucketDetails.ARN)
 	if err != nil {
 		return binding, err
 	}
@@ -281,7 +286,7 @@ func (b *S3Broker) policyName(bindingID string) string {
 func (b *S3Broker) createBucket(instanceID string, servicePlan ServicePlan, provisionParameters ProvisionParameters, details brokerapi.ProvisionDetails) *awss3.BucketDetails {
 	bucketDetails := b.bucketFromPlan(servicePlan)
 	bucketDetails.Tags = b.bucketTags("Created", details.ServiceID, details.PlanID, details.OrganizationGUID, details.SpaceGUID)
-	bucketDetails.Policy = string(servicePlan.S3Properties.Policy)
+	bucketDetails.Policy = string(servicePlan.S3Properties.BucketPolicy)
 	bucketDetails.AwsPartition = b.awsPartition
 	return bucketDetails
 }

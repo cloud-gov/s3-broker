@@ -1,27 +1,15 @@
 package awsiam
 
 import (
-	"encoding/json"
+	"bytes"
 	"errors"
+	"text/template"
 
 	"code.cloudfoundry.org/lager"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/iam"
 )
-
-type UserPolicy struct {
-	Version    string                `json:"Version"`
-	ID         string                `json:"Id"`
-	Statements []UserPolicyStatement `json:"Statement"`
-}
-
-type UserPolicyStatement struct {
-	SID      string `json:"Sid"`
-	Effect   string `json:"Effect"`
-	Action   string `json:"Action"`
-	Resource string `json:"Resource"`
-}
 
 type IAMUser struct {
 	iamsvc *iam.IAM
@@ -167,15 +155,24 @@ func (i *IAMUser) DeleteAccessKey(userName, accessKeyID string) error {
 	return nil
 }
 
-func (i *IAMUser) CreatePolicy(policyName, iamPath, effect, action, resource string) (string, error) {
-	policyDocument, err := i.buildUserPolicy(policyName, effect, action, resource)
+func (i *IAMUser) CreatePolicy(policyName, iamPath, policyTemplate, resource string) (string, error) {
+	tmpl, err := template.New("policy").Parse(policyTemplate)
 	if err != nil {
+		i.logger.Error("aws-iam-error", err)
+		return "", err
+	}
+	policy := bytes.Buffer{}
+	err = tmpl.Execute(&policy, map[string]interface{}{
+		"Resource": resource,
+	})
+	if err != nil {
+		i.logger.Error("aws-iam-error", err)
 		return "", err
 	}
 
 	createPolicyInput := &iam.CreatePolicyInput{
 		PolicyName:     aws.String(policyName),
-		PolicyDocument: aws.String(policyDocument),
+		PolicyDocument: aws.String(policy.String()),
 		Path:           stringOrNil(iamPath),
 	}
 	i.logger.Debug("create-policy", lager.Data{"input": createPolicyInput})
@@ -276,34 +273,6 @@ func (i *IAMUser) DetachUserPolicy(userName string, policyARN string) error {
 	i.logger.Debug("detach-user-policy", lager.Data{"output": detachUserPolicyOutput})
 
 	return nil
-}
-
-func (i *IAMUser) buildUserPolicy(policyID string, effect string, action string, resource string) (string, error) {
-	userPolicy := UserPolicy{
-		Version: "2012-10-17",
-		ID:      policyID,
-		Statements: []UserPolicyStatement{
-			UserPolicyStatement{
-				SID:      "1",
-				Effect:   effect,
-				Action:   action,
-				Resource: resource,
-			},
-			UserPolicyStatement{
-				SID:      "2",
-				Effect:   effect,
-				Action:   action,
-				Resource: resource + "/*",
-			},
-		},
-	}
-
-	policy, err := json.Marshal(userPolicy)
-	if err != nil {
-		return "", err
-	}
-
-	return string(policy), nil
 }
 
 func stringOrNil(v string) *string {
