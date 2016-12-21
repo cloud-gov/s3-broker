@@ -13,6 +13,8 @@ var _ = Describe("Config", func() {
 
 		validConfig = Config{
 			Region:       "s3-region",
+			UserPrefix:   "cf",
+			PolicyPrefix: "cf",
 			BucketPrefix: "cf",
 			Catalog: Catalog{
 				[]Service{
@@ -42,6 +44,22 @@ var _ = Describe("Config", func() {
 			err := config.Validate()
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("Must provide a non-empty Region"))
+		})
+
+		It("returns error if UserPrefix is not valid", func() {
+			config.UserPrefix = ""
+
+			err := config.Validate()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("Must provide a non-empty UserPrefix"))
+		})
+
+		It("returns error if PolicyPrefix is not valid", func() {
+			config.PolicyPrefix = ""
+
+			err := config.Validate()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("Must provide a non-empty PolicyPrefix"))
 		})
 
 		It("returns error if BucketPrefix is not valid", func() {
