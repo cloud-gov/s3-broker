@@ -21,6 +21,8 @@ const acceptsIncompleteLogKey = "acceptsIncomplete"
 
 type S3Broker struct {
 	iamPath                      string
+	userPrefix                   string
+	policyPrefix                 string
 	bucketPrefix                 string
 	awsPartition                 string
 	allowUserProvisionParameters bool
@@ -44,6 +46,8 @@ func New(
 ) *S3Broker {
 	return &S3Broker{
 		iamPath:                      config.IamPath,
+		userPrefix:                   config.UserPrefix,
+		policyPrefix:                 config.PolicyPrefix,
 		bucketPrefix:                 config.BucketPrefix,
 		awsPartition:                 config.AwsPartition,
 		allowUserProvisionParameters: config.AllowUserProvisionParameters,
@@ -276,11 +280,11 @@ func (b *S3Broker) bucketName(instanceID string) string {
 }
 
 func (b *S3Broker) userName(bindingID string) string {
-	return fmt.Sprintf("%s-%s", b.bucketPrefix, bindingID)
+	return fmt.Sprintf("%s-%s", b.userPrefix, bindingID)
 }
 
 func (b *S3Broker) policyName(bindingID string) string {
-	return fmt.Sprintf("%s-%s", b.bucketPrefix, bindingID)
+	return fmt.Sprintf("%s-%s", b.policyPrefix, bindingID)
 }
 
 func (b *S3Broker) createBucket(instanceID string, servicePlan ServicePlan, provisionParameters ProvisionParameters, details brokerapi.ProvisionDetails) *awss3.BucketDetails {
