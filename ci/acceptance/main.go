@@ -37,8 +37,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	config := &aws.Config{
 		Region: aws.String(creds["region"].(string)),
 		Credentials: credentials.NewStaticCredentials(
-			creds["username"].(string),
-			creds["password"].(string),
+			creds["access_key_id"].(string),
+			creds["secret_access_key"].(string),
 			"",
 		),
 	}
@@ -55,7 +55,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// Test put object
 	_, err = svc.PutObject(&s3.PutObjectInput{
 		Body:   strings.NewReader(value),
-		Bucket: aws.String(creds["name"].(string)),
+		Bucket: aws.String(creds["bucket"].(string)),
 		Key:    aws.String(key),
 	})
 	if err != nil {
@@ -66,7 +66,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	// Test get object
 	result, err := svc.GetObject(&s3.GetObjectInput{
-		Bucket: aws.String(creds["name"].(string)),
+		Bucket: aws.String(creds["bucket"].(string)),
 		Key:    aws.String(key),
 	})
 	if err != nil {
@@ -85,7 +85,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	// Test delete object
 	_, err = svc.DeleteObject(&s3.DeleteObjectInput{
-		Bucket: aws.String(creds["name"].(string)),
+		Bucket: aws.String(creds["bucket"].(string)),
 		Key:    aws.String(key),
 	})
 	if err != nil {
