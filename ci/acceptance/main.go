@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -79,6 +80,25 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(result.Body)
 	if string(body) != value {
 		log.Println(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Test public access
+	resp, _ := http.Get(
+		fmt.Sprintf(
+			"https://s3-%s.amazonaws.com/%s/%s",
+			creds["region"].(string),
+			creds["bucket"].(string),
+			key,
+		),
+	)
+	expectedCode := http.StatusForbidden
+	if os.Getenv("IS_PUBLIC") == "true" {
+		expectedCode = http.StatusOK
+	}
+	if resp.StatusCode != expectedCode {
+		log.Println(fmt.Sprintf("expected code %d; got %d", expectedCode, resp.StatusCode))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

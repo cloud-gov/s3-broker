@@ -18,6 +18,7 @@ path=$(cd $(dirname $0); pwd -P)
 cf push ${APP_NAME} -p ${path} -m ${MEMORY_LIMIT:-"128M"} --no-start
 
 cf set-env ${APP_NAME} SERVICE_NAME ${SERVICE_NAME}
+cf set-env ${APP_NAME} IS_PUBLIC ${IS_PUBLIC:-"false"}
 cf create-service ${SERVICE_NAME} ${PLAN_NAME} ${SERVICE_INSTANCE_NAME}
 cf bind-service ${APP_NAME} ${SERVICE_INSTANCE_NAME}
 cf start ${APP_NAME}
