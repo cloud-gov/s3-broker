@@ -1,11 +1,6 @@
 # AWS S3 Service Broker [![Build Status](https://travis-ci.org/cloudfoundry-community/s3-broker.png)](https://travis-ci.org/cloudfoundry-community/s3-broker)
 
-This is an **experimental** [Cloud Foundry Service Broker](https://docs.cloudfoundry.org/services/overview.html) for [Amazon S3  ](https://aws.amazon.com/s3/).
-
-
-## Disclaimer
-
-This is **NOT** presently a production ready Service Broker. This is a work in progress. It is suitable for experimentation and may not become supported in the future.
+This is an [Cloud Foundry Service Broker](https://docs.cloudfoundry.org/services/overview.html) for [Amazon S3  ](https://aws.amazon.com/s3/).
 
 ## Installation
 
