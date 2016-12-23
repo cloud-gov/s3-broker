@@ -1,6 +1,6 @@
 # AWS S3 Service Broker [![Build Status](https://travis-ci.org/cloudfoundry-community/s3-broker.png)](https://travis-ci.org/cloudfoundry-community/s3-broker)
 
-This is an [Cloud Foundry Service Broker](https://docs.cloudfoundry.org/services/overview.html) for [Amazon S3  ](https://aws.amazon.com/s3/).
+This is a [Cloud Foundry Service Broker](https://docs.cloudfoundry.org/services/overview.html) for [Amazon S3  ](https://aws.amazon.com/s3/).
 
 ## Installation
 
