@@ -1,6 +1,10 @@
 package fakes
 
-import "github.com/pivotal-cf/brokerapi"
+import (
+	"context"
+
+	"github.com/pivotal-cf/brokerapi"
+)
 
 type FakeServiceBroker struct {
 	ProvisionDetails   brokerapi.ProvisionDetails
@@ -40,6 +44,8 @@ type FakeServiceBroker struct {
 
 	LastOperationInstanceID string
 	LastOperationData       string
+
+	ReceivedContext bool
 }
 
 type FakeAsyncServiceBroker struct {
@@ -51,8 +57,12 @@ type FakeAsyncOnlyServiceBroker struct {
 	FakeServiceBroker
 }
 
-func (fakeBroker *FakeServiceBroker) Services() []brokerapi.Service {
+func (fakeBroker *FakeServiceBroker) Services(context context.Context) []brokerapi.Service {
 	fakeBroker.BrokerCalled = true
+
+	if val, ok := context.Value("test_context").(bool); ok {
+		fakeBroker.ReceivedContext = val
+	}
 
 	return []brokerapi.Service{
 		brokerapi.Service{
@@ -86,8 +96,12 @@ func (fakeBroker *FakeServiceBroker) Services() []brokerapi.Service {
 	}
 }
 
-func (fakeBroker *FakeServiceBroker) Provision(instanceID string, details brokerapi.ProvisionDetails, asyncAllowed bool) (brokerapi.ProvisionedServiceSpec, error) {
+func (fakeBroker *FakeServiceBroker) Provision(context context.Context, instanceID string, details brokerapi.ProvisionDetails, asyncAllowed bool) (brokerapi.ProvisionedServiceSpec, error) {
 	fakeBroker.BrokerCalled = true
+
+	if val, ok := context.Value("test_context").(bool); ok {
+		fakeBroker.ReceivedContext = val
+	}
 
 	if fakeBroker.ProvisionError != nil {
 		return brokerapi.ProvisionedServiceSpec{}, fakeBroker.ProvisionError
@@ -106,7 +120,7 @@ func (fakeBroker *FakeServiceBroker) Provision(instanceID string, details broker
 	return brokerapi.ProvisionedServiceSpec{DashboardURL: fakeBroker.DashboardURL}, nil
 }
 
-func (fakeBroker *FakeAsyncServiceBroker) Provision(instanceID string, details brokerapi.ProvisionDetails, asyncAllowed bool) (brokerapi.ProvisionedServiceSpec, error) {
+func (fakeBroker *FakeAsyncServiceBroker) Provision(context context.Context, instanceID string, details brokerapi.ProvisionDetails, asyncAllowed bool) (brokerapi.ProvisionedServiceSpec, error) {
 	fakeBroker.BrokerCalled = true
 
 	if fakeBroker.ProvisionError != nil {
@@ -126,7 +140,7 @@ func (fakeBroker *FakeAsyncServiceBroker) Provision(instanceID string, details b
 	return brokerapi.ProvisionedServiceSpec{IsAsync: fakeBroker.ShouldProvisionAsync, DashboardURL: fakeBroker.DashboardURL, OperationData: fakeBroker.OperationDataToReturn}, nil
 }
 
-func (fakeBroker *FakeAsyncOnlyServiceBroker) Provision(instanceID string, details brokerapi.ProvisionDetails, asyncAllowed bool) (brokerapi.ProvisionedServiceSpec, error) {
+func (fakeBroker *FakeAsyncOnlyServiceBroker) Provision(context context.Context, instanceID string, details brokerapi.ProvisionDetails, asyncAllowed bool) (brokerapi.ProvisionedServiceSpec, error) {
 	fakeBroker.BrokerCalled = true
 
 	if fakeBroker.ProvisionError != nil {
@@ -150,8 +164,12 @@ func (fakeBroker *FakeAsyncOnlyServiceBroker) Provision(instanceID string, detai
 	return brokerapi.ProvisionedServiceSpec{IsAsync: true, DashboardURL: fakeBroker.DashboardURL}, nil
 }
 
-func (fakeBroker *FakeServiceBroker) Update(instanceID string, details brokerapi.UpdateDetails, asyncAllowed bool) (brokerapi.UpdateServiceSpec, error) {
+func (fakeBroker *FakeServiceBroker) Update(context context.Context, instanceID string, details brokerapi.UpdateDetails, asyncAllowed bool) (brokerapi.UpdateServiceSpec, error) {
 	fakeBroker.BrokerCalled = true
+
+	if val, ok := context.Value("test_context").(bool); ok {
+		fakeBroker.ReceivedContext = val
+	}
 
 	if fakeBroker.UpdateError != nil {
 		return brokerapi.UpdateServiceSpec{}, fakeBroker.UpdateError
@@ -163,8 +181,12 @@ func (fakeBroker *FakeServiceBroker) Update(instanceID string, details brokerapi
 	return brokerapi.UpdateServiceSpec{IsAsync: fakeBroker.ShouldReturnAsync, OperationData: fakeBroker.OperationDataToReturn}, nil
 }
 
-func (fakeBroker *FakeServiceBroker) Deprovision(instanceID string, details brokerapi.DeprovisionDetails, asyncAllowed bool) (brokerapi.DeprovisionServiceSpec, error) {
+func (fakeBroker *FakeServiceBroker) Deprovision(context context.Context, instanceID string, details brokerapi.DeprovisionDetails, asyncAllowed bool) (brokerapi.DeprovisionServiceSpec, error) {
 	fakeBroker.BrokerCalled = true
+
+	if val, ok := context.Value("test_context").(bool); ok {
+		fakeBroker.ReceivedContext = val
+	}
 
 	if fakeBroker.DeprovisionError != nil {
 		return brokerapi.DeprovisionServiceSpec{}, fakeBroker.DeprovisionError
@@ -179,7 +201,7 @@ func (fakeBroker *FakeServiceBroker) Deprovision(instanceID string, details brok
 	return brokerapi.DeprovisionServiceSpec{IsAsync: false}, brokerapi.ErrInstanceDoesNotExist
 }
 
-func (fakeBroker *FakeAsyncOnlyServiceBroker) Deprovision(instanceID string, details brokerapi.DeprovisionDetails, asyncAllowed bool) (brokerapi.DeprovisionServiceSpec, error) {
+func (fakeBroker *FakeAsyncOnlyServiceBroker) Deprovision(context context.Context, instanceID string, details brokerapi.DeprovisionDetails, asyncAllowed bool) (brokerapi.DeprovisionServiceSpec, error) {
 	fakeBroker.BrokerCalled = true
 
 	if fakeBroker.DeprovisionError != nil {
@@ -200,7 +222,7 @@ func (fakeBroker *FakeAsyncOnlyServiceBroker) Deprovision(instanceID string, det
 	return brokerapi.DeprovisionServiceSpec{IsAsync: true, OperationData: fakeBroker.OperationDataToReturn}, brokerapi.ErrInstanceDoesNotExist
 }
 
-func (fakeBroker *FakeAsyncServiceBroker) Deprovision(instanceID string, details brokerapi.DeprovisionDetails, asyncAllowed bool) (brokerapi.DeprovisionServiceSpec, error) {
+func (fakeBroker *FakeAsyncServiceBroker) Deprovision(context context.Context, instanceID string, details brokerapi.DeprovisionDetails, asyncAllowed bool) (brokerapi.DeprovisionServiceSpec, error) {
 	fakeBroker.BrokerCalled = true
 
 	if fakeBroker.DeprovisionError != nil {
@@ -217,8 +239,12 @@ func (fakeBroker *FakeAsyncServiceBroker) Deprovision(instanceID string, details
 	return brokerapi.DeprovisionServiceSpec{OperationData: fakeBroker.OperationDataToReturn, IsAsync: asyncAllowed}, brokerapi.ErrInstanceDoesNotExist
 }
 
-func (fakeBroker *FakeServiceBroker) Bind(instanceID, bindingID string, details brokerapi.BindDetails) (brokerapi.Binding, error) {
+func (fakeBroker *FakeServiceBroker) Bind(context context.Context, instanceID, bindingID string, details brokerapi.BindDetails) (brokerapi.Binding, error) {
 	fakeBroker.BrokerCalled = true
+
+	if val, ok := context.Value("test_context").(bool); ok {
+		fakeBroker.ReceivedContext = val
+	}
 
 	if fakeBroker.BindError != nil {
 		return brokerapi.Binding{}, fakeBroker.BindError
@@ -242,8 +268,12 @@ func (fakeBroker *FakeServiceBroker) Bind(instanceID, bindingID string, details 
 	}, nil
 }
 
-func (fakeBroker *FakeServiceBroker) Unbind(instanceID, bindingID string, details brokerapi.UnbindDetails) error {
+func (fakeBroker *FakeServiceBroker) Unbind(context context.Context, instanceID, bindingID string, details brokerapi.UnbindDetails) error {
 	fakeBroker.BrokerCalled = true
+
+	if val, ok := context.Value("test_context").(bool); ok {
+		fakeBroker.ReceivedContext = val
+	}
 
 	fakeBroker.UnbindingDetails = details
 
@@ -257,9 +287,13 @@ func (fakeBroker *FakeServiceBroker) Unbind(instanceID, bindingID string, detail
 	return brokerapi.ErrInstanceDoesNotExist
 }
 
-func (fakeBroker *FakeServiceBroker) LastOperation(instanceID, operationData string) (brokerapi.LastOperation, error) {
+func (fakeBroker *FakeServiceBroker) LastOperation(context context.Context, instanceID, operationData string) (brokerapi.LastOperation, error) {
 	fakeBroker.LastOperationInstanceID = instanceID
 	fakeBroker.LastOperationData = operationData
+
+	if val, ok := context.Value("test_context").(bool); ok {
+		fakeBroker.ReceivedContext = val
+	}
 
 	if fakeBroker.LastOperationError != nil {
 		return brokerapi.LastOperation{}, fakeBroker.LastOperationError

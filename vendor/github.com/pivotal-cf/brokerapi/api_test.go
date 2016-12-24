@@ -2,6 +2,7 @@ package brokerapi_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -92,6 +93,60 @@ var _ = Describe("Service Broker API", func() {
 
 			header := response.Header().Get("Content-Type")
 			Ω(header).Should(Equal("application/json"))
+		})
+	})
+
+	Describe("request context", func() {
+		var (
+			ctx context.Context
+		)
+
+		makeRequest := func(method, path, body string) *httptest.ResponseRecorder {
+			recorder := httptest.NewRecorder()
+			request, _ := http.NewRequest(method, path, strings.NewReader(body))
+			request.SetBasicAuth(credentials.Username, credentials.Password)
+			request = request.WithContext(ctx)
+			brokerAPI.ServeHTTP(recorder, request)
+			return recorder
+		}
+
+		BeforeEach(func() {
+			ctx = context.WithValue(context.Background(), "test_context", true)
+		})
+
+		It("catalog endpoint passes the request context to the broker", func() {
+			makeRequest("GET", "/v2/catalog", "")
+			Expect(fakeServiceBroker.ReceivedContext).To(BeTrue())
+		})
+
+		It("provision endpoint passes the request context to the broker", func() {
+			makeRequest("PUT", "/v2/service_instances/instance-id", "{}")
+			Expect(fakeServiceBroker.ReceivedContext).To(BeTrue())
+		})
+
+		It("deprovision endpoint passes the request context to the broker", func() {
+			makeRequest("DELETE", "/v2/service_instances/instance-id", "")
+			Expect(fakeServiceBroker.ReceivedContext).To(BeTrue())
+		})
+
+		It("bind endpoint passes the request context to the broker", func() {
+			makeRequest("PUT", "/v2/service_instances/instance-id/service_bindings/binding-id", "{}")
+			Expect(fakeServiceBroker.ReceivedContext).To(BeTrue())
+		})
+
+		It("unbind endpoint passes the request context to the broker", func() {
+			makeRequest("DELETE", "/v2/service_instances/instance-id/service_bindings/binding-id", "")
+			Expect(fakeServiceBroker.ReceivedContext).To(BeTrue())
+		})
+
+		It("update endpoint passes the request context to the broker", func() {
+			makeRequest("PATCH", "/v2/service_instances/instance-id", "{}")
+			Expect(fakeServiceBroker.ReceivedContext).To(BeTrue())
+		})
+
+		It("last operation endpoint passes the request context to the broker", func() {
+			makeRequest("GET", "/v2/service_instances/instance-id/last_operation", "{}")
+			Expect(fakeServiceBroker.ReceivedContext).To(BeTrue())
 		})
 	})
 
@@ -858,7 +913,7 @@ var _ = Describe("Service Broker API", func() {
 	})
 
 	Describe("binding lifecycle endpoint", func() {
-		makeBindingRequest := func(instanceID, bindingID string, details *brokerapi.BindDetails) *testflight.Response {
+		makeBindingRequestWithSpecificAPIVersion := func(instanceID, bindingID string, details *brokerapi.BindDetails, apiVersion string) *testflight.Response {
 			response := &testflight.Response{}
 			testflight.WithServer(brokerAPI, func(r *testflight.Requester) {
 				path := fmt.Sprintf("/v2/service_instances/%s/service_bindings/%s",
@@ -875,11 +930,16 @@ var _ = Describe("Service Broker API", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				request.Header.Add("Content-Type", "application/json")
+				request.Header.Add("X-Broker-Api-Version", apiVersion)
 				request.SetBasicAuth("username", "password")
 
 				response = r.Do(request)
 			})
 			return response
+		}
+
+		makeBindingRequest := func(instanceID, bindingID string, details *brokerapi.BindDetails) *testflight.Response {
+			return makeBindingRequestWithSpecificAPIVersion(instanceID, bindingID, details, "2.10")
 		}
 
 		Describe("binding", func() {
@@ -953,9 +1013,25 @@ var _ = Describe("Service Broker API", func() {
 						}}
 					})
 
-					It("responds with a volume mount", func() {
-						response := makeBindingRequest(uniqueInstanceID(), uniqueBindingID(), details)
-						Expect(response.Body).To(MatchJSON(fixture("binding_with_volume_mounts.json")))
+					Context("when the broker API version is greater than 2.9", func() {
+						It("responds with a volume mount", func() {
+							response := makeBindingRequest(uniqueInstanceID(), uniqueBindingID(), details)
+							Expect(response.Body).To(MatchJSON(fixture("binding_with_volume_mounts.json")))
+						})
+					})
+
+					Context("when the broker API version is 2.9", func() {
+						It("responds with an experimental volume mount", func() {
+							response := makeBindingRequestWithSpecificAPIVersion(uniqueInstanceID(), uniqueBindingID(), details, "2.9")
+							Expect(response.Body).To(MatchJSON(fixture("binding_with_experimental_volume_mounts.json")))
+						})
+					})
+
+					Context("when the broker API version is 2.8", func() {
+						It("responds with an experimental volume mount", func() {
+							response := makeBindingRequestWithSpecificAPIVersion(uniqueInstanceID(), uniqueBindingID(), details, "2.8")
+							Expect(response.Body).To(MatchJSON(fixture("binding_with_experimental_volume_mounts.json")))
+						})
 					})
 				})
 

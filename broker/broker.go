@@ -1,6 +1,7 @@
 package broker
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -59,7 +60,7 @@ func New(
 	}
 }
 
-func (b *S3Broker) Services() []brokerapi.Service {
+func (b *S3Broker) Services(context context.Context) []brokerapi.Service {
 	brokerCatalog, err := json.Marshal(b.catalog)
 	if err != nil {
 		b.logger.Error("marshal-error", err)
@@ -76,6 +77,7 @@ func (b *S3Broker) Services() []brokerapi.Service {
 }
 
 func (b *S3Broker) Provision(
+	context context.Context,
 	instanceID string,
 	details brokerapi.ProvisionDetails,
 	asyncAllowed bool,
@@ -108,6 +110,7 @@ func (b *S3Broker) Provision(
 }
 
 func (b *S3Broker) Update(
+	context context.Context,
 	instanceID string,
 	details brokerapi.UpdateDetails,
 	asyncAllowed bool,
@@ -142,6 +145,7 @@ func (b *S3Broker) Update(
 }
 
 func (b *S3Broker) Deprovision(
+	context context.Context,
 	instanceID string,
 	details brokerapi.DeprovisionDetails,
 	asyncAllowed bool,
@@ -162,7 +166,11 @@ func (b *S3Broker) Deprovision(
 	return brokerapi.DeprovisionServiceSpec{IsAsync: false}, nil
 }
 
-func (b *S3Broker) Bind(instanceID, bindingID string, details brokerapi.BindDetails) (brokerapi.Binding, error) {
+func (b *S3Broker) Bind(
+	context context.Context,
+	instanceID, bindingID string,
+	details brokerapi.BindDetails,
+) (brokerapi.Binding, error) {
 	b.logger.Debug("bind", lager.Data{
 		instanceIDLogKey: instanceID,
 		bindingIDLogKey:  bindingID,
@@ -227,7 +235,11 @@ func (b *S3Broker) Bind(instanceID, bindingID string, details brokerapi.BindDeta
 	return binding, nil
 }
 
-func (b *S3Broker) Unbind(instanceID, bindingID string, details brokerapi.UnbindDetails) error {
+func (b *S3Broker) Unbind(
+	context context.Context,
+	instanceID, bindingID string,
+	details brokerapi.UnbindDetails,
+) error {
 	b.logger.Debug("unbind", lager.Data{
 		instanceIDLogKey: instanceID,
 		bindingIDLogKey:  bindingID,
@@ -267,7 +279,10 @@ func (b *S3Broker) Unbind(instanceID, bindingID string, details brokerapi.Unbind
 	return nil
 }
 
-func (b *S3Broker) LastOperation(instanceID, operationData string) (brokerapi.LastOperation, error) {
+func (b *S3Broker) LastOperation(
+	context context.Context,
+	instanceID, operationData string,
+) (brokerapi.LastOperation, error) {
 	b.logger.Debug("last-operation", lager.Data{
 		instanceIDLogKey: instanceID,
 	})
