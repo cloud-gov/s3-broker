@@ -54,15 +54,43 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	svc := s3.New(sess)
 
 	// Test put object
-	_, err = svc.PutObject(&s3.PutObjectInput{
-		Body:   strings.NewReader(value),
-		Bucket: aws.String(creds["bucket"].(string)),
-		Key:    aws.String(key),
-	})
-	if err != nil {
-		log.Println(err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	if os.Getenv("IS_ENCRYPTED") == "true" {
+		// Unencrypted PUT should be rejected
+		_, err = svc.PutObject(&s3.PutObjectInput{
+			Body:   strings.NewReader(value),
+			Bucket: aws.String(creds["bucket"].(string)),
+			Key:    aws.String(key),
+		})
+		if err == nil {
+			log.Println("Unencrypted PUT was not rejected")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// Encrypted PUT should be accepted
+		_, err = svc.PutObject(&s3.PutObjectInput{
+			Body:                 strings.NewReader(value),
+			Bucket:               aws.String(creds["bucket"].(string)),
+			Key:                  aws.String(key),
+			ServerSideEncryption: aws.String("AES256"),
+		})
+		if err != nil {
+			log.Println(err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	} else {
+		// Any PUT should be accepted
+		_, err = svc.PutObject(&s3.PutObjectInput{
+			Body:   strings.NewReader(value),
+			Bucket: aws.String(creds["bucket"].(string)),
+			Key:    aws.String(key),
+		})
+		if err != nil {
+			log.Println(err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 
 	// Test get object
