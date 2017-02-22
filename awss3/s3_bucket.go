@@ -43,7 +43,12 @@ func (s *S3Bucket) Describe(bucketName, partition string) (BucketDetails, error)
 	}
 	s.logger.Debug("get-bucket-location", lager.Data{"output": getLocationOutput})
 
-	return s.buildBucketDetails(bucketName, *getLocationOutput.LocationConstraint, partition, nil), nil
+	region := getLocationOutput.LocationConstraint
+	if region == nil {
+		region = aws.String("us-east-1")
+	}
+
+	return s.buildBucketDetails(bucketName, *region, partition, nil), nil
 }
 
 func (s *S3Bucket) Create(bucketName string, bucketDetails BucketDetails) (string, error) {
