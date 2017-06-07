@@ -23,7 +23,7 @@ cf create-service ${SERVICE_NAME} ${PLAN_NAME} ${SERVICE_INSTANCE_NAME}
 cf bind-service ${APP_NAME} ${SERVICE_INSTANCE_NAME}
 cf start ${APP_NAME}
 
-url=$(cf app ${APP_NAME} | grep "urls: " | awk '{print $2}')
+url=$(cf app ${APP_NAME} | grep -e "urls: " -e "routes: " | awk '{print $2}')
 status=$(curl -w "%{http_code}" "https://${url}")
 if [ "${status}" != "200" ]; then
   echo "Unexpected status code ${status}"
