@@ -1,8 +1,11 @@
 hash: d98df5658d8f764bd0c748514fa48ec6384d2b811fcc311c4f0306d137ca13fe
-updated: 2016-12-23T16:07:33.812869057-05:00
+updated: 2017-06-24T15:18:44.829316761-04:00
 imports:
 - name: code.cloudfoundry.org/lager
-  version: 6cfe365fb6bb84343f0034b4a53cd250d173b61f
+  version: dfcbcba2dd4a5228c43b0292d219d5c010daed3a
+  subpackages:
+  - lagerctx
+  - lagertest
 - name: github.com/aws/aws-sdk-go
   version: 6c577e9e7b08a6d10bad1c9703227cd0403a8dd7
   subpackages:
@@ -32,18 +35,58 @@ imports:
   - service/iam
   - service/s3
   - service/sts
+- name: github.com/cloudfoundry-community/go-cfenv
+  version: f920e9562d5f951cbf11785728f67258c38a10d0
 - name: github.com/go-ini/ini
-  version: 6f66b0e091edb3c7b380f7c4f0f884274d550b67
+  version: d3de07a94d22b4a0972deb4b96d790c2c0ce8333
 - name: github.com/gorilla/context
-  version: a8d44e7d8e4d532b6a27a02dd82abb31cc1b01bd
+  version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
 - name: github.com/gorilla/mux
   version: cf79e51a62d8219d52060dfc1b4e810414ba2d15
 - name: github.com/jmespath/go-jmespath
   version: bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d
 - name: github.com/mitchellh/mapstructure
-  version: d2dd0262208475919e1a362f675cfc0e7c10e905
+  version: d0303fe809921458f417bcf828397a65db30a7e4
+- name: github.com/onsi/ginkgo
+  version: 43e2af1f01ace55adbb6d7d0f30416476db1baae
+  subpackages:
+  - config
+  - internal/codelocation
+  - internal/containernode
+  - internal/failer
+  - internal/leafnodes
+  - internal/remote
+  - internal/spec
+  - internal/specrunner
+  - internal/suite
+  - internal/testingtproxy
+  - internal/writer
+  - reporters
+  - reporters/stenographer
+  - types
+- name: github.com/onsi/gomega
+  version: c90bd38f8da6e92f8b114953db2f0ad7361fb4b4
+  subpackages:
+  - format
+  - gbytes
+  - internal/assertion
+  - internal/asyncassertion
+  - internal/oraclematcher
+  - internal/testingtsupport
+  - matchers
+  - matchers/support/goraph/bipartitegraph
+  - matchers/support/goraph/edge
+  - matchers/support/goraph/node
+  - matchers/support/goraph/util
+  - types
 - name: github.com/pivotal-cf/brokerapi
-  version: 3dcb3e88faf1f81359679aa1b931df45d30f01de
+  version: 6d25b9398d9f05880ca8f480134a88c8d2df69bc
   subpackages:
   - auth
-testImports: []
+- name: golang.org/x/sys
+  version: a408501be4d17ee978c04a618e7a1b22af058c0e
+  subpackages:
+  - unix
+testImports:
+- name: gopkg.in/yaml.v2
+  version: e4d366fc3c7938e2958e662b4258c7a89e1f0e3e
