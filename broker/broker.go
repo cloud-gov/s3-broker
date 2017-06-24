@@ -123,7 +123,7 @@ func (b *S3Broker) Update(
 
 	updateParameters := UpdateParameters{}
 	if b.allowUserUpdateParameters {
-		if err := mapstructure.Decode(details.Parameters, &updateParameters); err != nil {
+		if err := mapstructure.Decode(details.RawParameters, &updateParameters); err != nil {
 			return brokerapi.UpdateServiceSpec{}, err
 		}
 	}
