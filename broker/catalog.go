@@ -1,7 +1,6 @@
 package broker
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -9,34 +8,34 @@ import (
 )
 
 type Catalog struct {
-	Services []Service `json:"services,omitempty"`
+	Services []Service `yaml:"services,omitempty"`
 }
 
 type Service struct {
-	ID              string                            `json:"id"`
-	Name            string                            `json:"name"`
-	Description     string                            `json:"description"`
-	Bindable        bool                              `json:"bindable"`
-	Tags            []string                          `json:"tags,omitempty"`
-	PlanUpdatable   bool                              `json:"plan_updateable"`
-	Plans           []ServicePlan                     `json:"plans"`
-	Requires        []brokerapi.RequiredPermission    `json:"requires,omitempty"`
-	Metadata        *brokerapi.ServiceMetadata        `json:"metadata,omitempty"`
-	DashboardClient *brokerapi.ServiceDashboardClient `json:"dashboard_client,omitempty"`
+	ID              string                            `yaml:"id"`
+	Name            string                            `yaml:"name"`
+	Description     string                            `yaml:"description"`
+	Bindable        bool                              `yaml:"bindable"`
+	Tags            []string                          `yaml:"tags,omitempty"`
+	PlanUpdatable   bool                              `yaml:"plan_updateable"`
+	Plans           []ServicePlan                     `yaml:"plans"`
+	Requires        []brokerapi.RequiredPermission    `yaml:"requires,omitempty"`
+	Metadata        *brokerapi.ServiceMetadata        `yaml:"metadata,omitempty"`
+	DashboardClient *brokerapi.ServiceDashboardClient `yaml:"dashboard_client,omitempty"`
 }
 
 type ServicePlan struct {
-	ID           string                         `json:"id"`
-	Name         string                         `json:"name"`
-	Description  string                         `json:"description"`
-	Free         bool                           `json:"free"`
-	Metadata     *brokerapi.ServicePlanMetadata `json:"metadata,omitempty"`
-	S3Properties S3Properties                   `json:"s3_properties,omitempty"`
+	ID           string                         `yaml:"id"`
+	Name         string                         `yaml:"name"`
+	Description  string                         `yaml:"description"`
+	Free         bool                           `yaml:"free"`
+	Metadata     *brokerapi.ServicePlanMetadata `yaml:"metadata,omitempty"`
+	S3Properties S3Properties                   `yaml:"s3_properties,omitempty"`
 }
 
 type S3Properties struct {
-	IamPolicy    json.RawMessage `json:"iam_policy,omitempty"`
-	BucketPolicy json.RawMessage `json:"bucket_policy,omitempty"`
+	IamPolicy    string `yaml:"iam_policy,omitempty"`
+	BucketPolicy string `yaml:"bucket_policy,omitempty"`
 }
 
 func (c Catalog) Validate() error {

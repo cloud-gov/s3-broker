@@ -69,7 +69,8 @@ func main() {
 	iamsvc := iam.New(awsSession)
 	user := awsiam.NewIAMUser(iamsvc, logger)
 
-	client, err := cfclient.NewClient(&config.CloudFoundry)
+	cfConfig := cfclient.Config(config.CFConfig)
+	client, err := cfclient.NewClient(&cfConfig)
 	if err != nil {
 		log.Fatalf("Error creating CF client: %s", err)
 	}

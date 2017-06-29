@@ -1,6 +1,6 @@
 # Configuration
 
-A sample configuration can be found at [config-sample.json](https://github.com/cloudfoundry-community/s3-broker/blob/master/config-sample.json).
+A sample configuration can be found at [config-sample.yml](https://github.com/cloudfoundry-community/s3-broker/blob/master/config-sample.yml).
 
 ## General Configuration
 

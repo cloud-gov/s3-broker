@@ -6,15 +6,15 @@ import (
 )
 
 type Config struct {
-	Region                       string  `json:"region"`
-	IamPath                      string  `json:"iam_path"`
-	UserPrefix                   string  `json:"user_prefix"`
-	PolicyPrefix                 string  `json:"policy_prefix"`
-	BucketPrefix                 string  `json:"bucket_prefix"`
-	AwsPartition                 string  `json:"aws_partition"`
-	AllowUserProvisionParameters bool    `json:"allow_user_provision_parameters"`
-	AllowUserUpdateParameters    bool    `json:"allow_user_update_parameters"`
-	Catalog                      Catalog `json:"catalog"`
+	Region                       string  `yaml:"region"`
+	IamPath                      string  `yaml:"iam_path"`
+	UserPrefix                   string  `yaml:"user_prefix"`
+	PolicyPrefix                 string  `yaml:"policy_prefix"`
+	BucketPrefix                 string  `yaml:"bucket_prefix"`
+	AwsPartition                 string  `yaml:"aws_partition"`
+	AllowUserProvisionParameters bool    `yaml:"allow_user_provision_parameters"`
+	AllowUserUpdateParameters    bool    `yaml:"allow_user_update_parameters"`
+	Catalog                      Catalog `yaml:"catalog"`
 }
 
 func (c Config) Validate() error {

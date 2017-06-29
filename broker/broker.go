@@ -246,7 +246,7 @@ func (b *S3Broker) Bind(
 	if err != nil {
 		return binding, err
 	}
-	bucketNames = append(bucketNames, b.bucketName(instanceID))
+	bucketNames = append([]string{b.bucketName(instanceID)}, bucketNames...)
 
 	credentials := Credentials{}
 	bucketARNs := make([]string, len(bucketNames))

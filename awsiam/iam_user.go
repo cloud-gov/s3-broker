@@ -2,6 +2,7 @@ package awsiam
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"text/template"
 
@@ -156,13 +157,23 @@ func (i *IAMUser) DeleteAccessKey(userName, accessKeyID string) error {
 }
 
 func (i *IAMUser) CreatePolicy(policyName, iamPath, policyTemplate string, resources []string) (string, error) {
-	tmpl, err := template.New("policy").Parse(policyTemplate)
+	tmpl, err := template.New("policy").Funcs(template.FuncMap{
+		"resources": func(suffix string) string {
+			resourcePaths := make([]string, len(resources))
+			for idx, resource := range resources {
+				resourcePaths[idx] = resource + suffix
+			}
+			marshaled, _ := json.Marshal(resourcePaths)
+			return string(marshaled)
+		},
+	}).Parse(policyTemplate)
 	if err != nil {
 		i.logger.Error("aws-iam-error", err)
 		return "", err
 	}
 	policy := bytes.Buffer{}
 	err = tmpl.Execute(&policy, map[string]interface{}{
+		"Resource":  resources[0],
 		"Resources": resources,
 	})
 	if err != nil {

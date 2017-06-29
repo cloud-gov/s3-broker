@@ -454,11 +454,7 @@ var _ = Describe("IAM User", func() {
 		{
 			"Effect": "effect",
 			"Action": "action",
-			"Resource": [
-			{{range $index, $resource := .Resources}}
-				{{if $index}},{{end}}"{{$resource}}"
-			{{end}}
-			]
+			"Resource": {{resources "/*"}}
 		}
 	]
 }`
@@ -478,7 +474,7 @@ var _ = Describe("IAM User", func() {
 		{
 			"Effect": "effect",
 			"Action": "action",
-			"Resource": ["resource"]
+			"Resource": ["resource/*"]
 		}
 	]
 }`),
