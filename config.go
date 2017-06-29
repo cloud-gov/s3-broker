@@ -7,14 +7,16 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/cloudfoundry-community/go-cfclient"
 	"github.com/cloudfoundry-community/s3-broker/broker"
 )
 
 type Config struct {
-	LogLevel string        `json:"log_level"`
-	Username string        `json:"username"`
-	Password string        `json:"password"`
-	S3Config broker.Config `json:"s3_config"`
+	LogLevel     string          `json:"log_level"`
+	Username     string          `json:"username"`
+	Password     string          `json:"password"`
+	S3Config     broker.Config   `json:"s3_config"`
+	CloudFoundry cfclient.Config `json:"cloud_foundry`
 }
 
 func LoadConfig(configFile string) (config *Config, err error) {

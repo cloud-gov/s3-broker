@@ -437,7 +437,7 @@ var _ = Describe("IAM User", func() {
 		var (
 			policyName string
 			template   string
-			resource   string
+			resources  []string
 
 			createPolicy *iam.Policy
 
@@ -454,11 +454,15 @@ var _ = Describe("IAM User", func() {
 		{
 			"Effect": "effect",
 			"Action": "action",
-			"Resource": "{{.Resource}}"
+			"Resource": [
+			{{range $index, $resource := .Resources}}
+				{{if $index}},{{end}}"{{$resource}}"
+			{{end}}
+			]
 		}
 	]
 }`
-			resource = "resource"
+			resources = []string{"resource"}
 
 			createPolicy = &iam.Policy{
 				Arn: aws.String("policy-arn"),
@@ -474,7 +478,7 @@ var _ = Describe("IAM User", func() {
 		{
 			"Effect": "effect",
 			"Action": "action",
-			"Resource": "resource"
+			"Resource": ["resource"]
 		}
 	]
 }`),
@@ -488,7 +492,7 @@ var _ = Describe("IAM User", func() {
 			iamCall = func(r *request.Request) {
 				Expect(r.Operation.Name).To(Equal("CreatePolicy"))
 				Expect(r.Params).To(BeAssignableToTypeOf(&iam.CreatePolicyInput{}))
-				Expect(r.Params).To(Equal(createPolicyInput))
+				Expect(*r.Params.(*iam.CreatePolicyInput).PolicyDocument).To(MatchJSON(*createPolicyInput.PolicyDocument))
 				data := r.Data.(*iam.CreatePolicyOutput)
 				data.Policy = createPolicy
 				r.Error = createPolicyError
@@ -497,7 +501,7 @@ var _ = Describe("IAM User", func() {
 		})
 
 		It("creates the Access Key", func() {
-			policyARN, err := user.CreatePolicy(policyName, iamPath, template, resource)
+			policyARN, err := user.CreatePolicy(policyName, iamPath, template, resources)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(policyARN).To(Equal("policy-arn"))
 		})
@@ -508,7 +512,7 @@ var _ = Describe("IAM User", func() {
 			})
 
 			It("returns the proper error", func() {
-				_, err := user.CreatePolicy(policyName, iamPath, template, resource)
+				_, err := user.CreatePolicy(policyName, iamPath, template, resources)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal("operation failed"))
 			})
@@ -519,7 +523,7 @@ var _ = Describe("IAM User", func() {
 				})
 
 				It("returns the proper error", func() {
-					_, err := user.CreatePolicy(policyName, iamPath, template, resource)
+					_, err := user.CreatePolicy(policyName, iamPath, template, resources)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(Equal("code: message"))
 				})

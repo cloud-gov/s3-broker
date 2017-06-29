@@ -155,7 +155,7 @@ func (i *IAMUser) DeleteAccessKey(userName, accessKeyID string) error {
 	return nil
 }
 
-func (i *IAMUser) CreatePolicy(policyName, iamPath, policyTemplate, resource string) (string, error) {
+func (i *IAMUser) CreatePolicy(policyName, iamPath, policyTemplate string, resources []string) (string, error) {
 	tmpl, err := template.New("policy").Parse(policyTemplate)
 	if err != nil {
 		i.logger.Error("aws-iam-error", err)
@@ -163,7 +163,7 @@ func (i *IAMUser) CreatePolicy(policyName, iamPath, policyTemplate, resource str
 	}
 	policy := bytes.Buffer{}
 	err = tmpl.Execute(&policy, map[string]interface{}{
-		"Resource": resource,
+		"Resources": resources,
 	})
 	if err != nil {
 		i.logger.Error("aws-iam-error", err)

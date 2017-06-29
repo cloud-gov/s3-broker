@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/cloudfoundry-community/go-cfclient"
 	"github.com/pivotal-cf/brokerapi"
 
 	"github.com/cloudfoundry-community/s3-broker/awsiam"
@@ -68,7 +69,12 @@ func main() {
 	iamsvc := iam.New(awsSession)
 	user := awsiam.NewIAMUser(iamsvc, logger)
 
-	serviceBroker := broker.New(config.S3Config, s3bucket, user, logger)
+	client, err := cfclient.NewClient(&config.CloudFoundry)
+	if err != nil {
+		log.Fatalf("Error creating CF client: %s", err)
+	}
+
+	serviceBroker := broker.New(config.S3Config, s3bucket, user, client, logger)
 
 	credentials := brokerapi.BrokerCredentials{
 		Username: config.Username,
