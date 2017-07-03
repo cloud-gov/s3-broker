@@ -249,7 +249,7 @@ func (b *S3Broker) Bind(
 	}
 	bucketNames = append([]string{b.bucketName(instanceID)}, bucketNames...)
 
-	credentials := Credentials{}
+	credentials := Credentials{AdditionalBuckets: []string{}}
 	bucketARNs := make([]string, len(bucketNames))
 	detailc, errc := make(chan awss3.BucketDetails), make(chan error)
 	for _, bucketName := range bucketNames {
