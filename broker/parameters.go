@@ -4,9 +4,9 @@ type ProvisionParameters struct {
 }
 
 type BindParameters struct {
-	AdditionalInstances []string `mapstructure:"additional_instances"`
+	AdditionalInstances []string `json:"additional_instances"`
 }
 
 type UpdateParameters struct {
-	ApplyImmediately bool `mapstructure:"apply_immediately"`
+	ApplyImmediately bool `json:"apply_immediately"`
 }

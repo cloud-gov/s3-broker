@@ -10,7 +10,6 @@ import (
 
 	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-community/go-cfclient"
-	"github.com/mitchellh/mapstructure"
 	"github.com/pivotal-cf/brokerapi"
 
 	"github.com/cloudfoundry-community/s3-broker/awsiam"
@@ -102,8 +101,8 @@ func (b *S3Broker) Provision(
 	})
 
 	provisionParameters := ProvisionParameters{}
-	if b.allowUserProvisionParameters {
-		if err := mapstructure.Decode(details.RawParameters, &provisionParameters); err != nil {
+	if b.allowUserProvisionParameters && len(details.RawParameters) > 0 {
+		if err := json.Unmarshal(details.RawParameters, &provisionParameters); err != nil {
 			return brokerapi.ProvisionedServiceSpec{}, err
 		}
 	}
@@ -135,8 +134,8 @@ func (b *S3Broker) Update(
 	})
 
 	updateParameters := UpdateParameters{}
-	if b.allowUserUpdateParameters {
-		if err := mapstructure.Decode(details.RawParameters, &updateParameters); err != nil {
+	if b.allowUserUpdateParameters && len(details.RawParameters) > 0 {
+		if err := json.Unmarshal(details.RawParameters, &updateParameters); err != nil {
 			return brokerapi.UpdateServiceSpec{}, err
 		}
 	}
@@ -238,8 +237,10 @@ func (b *S3Broker) Bind(
 	}
 
 	bindParameters := BindParameters{}
-	if err := mapstructure.Decode(details.RawParameters, &bindParameters); err != nil {
-		return binding, err
+	if len(details.RawParameters) > 0 {
+		if err := json.Unmarshal(details.RawParameters, &bindParameters); err != nil {
+			return binding, err
+		}
 	}
 
 	bucketNames, err := b.getBucketNames(bindParameters.AdditionalInstances, instanceID, details.ServiceID)
