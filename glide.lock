@@ -1,5 +1,5 @@
-hash: d98df5658d8f764bd0c748514fa48ec6384d2b811fcc311c4f0306d137ca13fe
-updated: 2017-06-24T15:18:44.829316761-04:00
+hash: 027077b67a3d6d6853d04006b2877b45444fa7f85d530ced2ce5029b54d73c51
+updated: 2017-07-03T10:51:56.802901047-04:00
 imports:
 - name: code.cloudfoundry.org/lager
   version: dfcbcba2dd4a5228c43b0292d219d5c010daed3a
@@ -7,7 +7,7 @@ imports:
   - lagerctx
   - lagertest
 - name: github.com/aws/aws-sdk-go
-  version: 6c577e9e7b08a6d10bad1c9703227cd0403a8dd7
+  version: a5a7f553e106c0b1dcbfbdaeb8774592fcc1a68a
   subpackages:
   - aws
   - aws/awserr
@@ -21,24 +21,30 @@ imports:
   - aws/credentials/stscreds
   - aws/defaults
   - aws/ec2metadata
+  - aws/endpoints
   - aws/request
   - aws/session
   - aws/signer/v4
-  - private/endpoints
+  - internal/shareddefaults
   - private/protocol
   - private/protocol/query
   - private/protocol/query/queryutil
   - private/protocol/rest
   - private/protocol/restxml
   - private/protocol/xml/xmlutil
-  - private/waiter
   - service/iam
   - service/s3
   - service/sts
+- name: github.com/cloudfoundry-community/go-cfclient
+  version: 0ae88fbc016f188b09b39a130537f653ea23be70
 - name: github.com/cloudfoundry-community/go-cfenv
   version: f920e9562d5f951cbf11785728f67258c38a10d0
 - name: github.com/go-ini/ini
-  version: d3de07a94d22b4a0972deb4b96d790c2c0ce8333
+  version: 3d73f4b845efdf9989fffd4b4e562727744a34ba
+- name: github.com/golang/protobuf
+  version: 6a1fa9404c0aebf36c879bc50152edcc953910d2
+  subpackages:
+  - proto
 - name: github.com/gorilla/context
   version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
 - name: github.com/gorilla/mux
@@ -65,13 +71,12 @@ imports:
   - reporters/stenographer
   - types
 - name: github.com/onsi/gomega
-  version: c90bd38f8da6e92f8b114953db2f0ad7361fb4b4
+  version: 4dfabf7db2e4147ec99a86db32b2f2a3484cfee8
   subpackages:
   - format
   - gbytes
   - internal/assertion
   - internal/asyncassertion
-  - internal/oraclematcher
   - internal/testingtsupport
   - matchers
   - matchers/support/goraph/bipartitegraph
@@ -83,10 +88,31 @@ imports:
   version: 6d25b9398d9f05880ca8f480134a88c8d2df69bc
   subpackages:
   - auth
+- name: github.com/pkg/errors
+  version: bfd5150e4e41705ded2129ec33379de1cb90b513
+- name: golang.org/x/net
+  version: 7dbad50ab5b31073856416cdcfeb2796d682f844
+  subpackages:
+  - context
+- name: golang.org/x/oauth2
+  version: 2baa8a1b9338cf13d9eeb27696d761155fa480be
+  subpackages:
+  - clientcredentials
+  - internal
 - name: golang.org/x/sys
   version: a408501be4d17ee978c04a618e7a1b22af058c0e
   subpackages:
   - unix
-testImports:
+- name: google.golang.org/appengine
+  version: d11fc8a8dccf41ab5bd3c51a3ea52051240e325c
+  subpackages:
+  - internal
+  - internal/base
+  - internal/datastore
+  - internal/log
+  - internal/remote_api
+  - internal/urlfetch
+  - urlfetch
 - name: gopkg.in/yaml.v2
   version: e4d366fc3c7938e2958e662b4258c7a89e1f0e3e
+testImports: []
