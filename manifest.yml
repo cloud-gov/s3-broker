@@ -3,8 +3,8 @@ applications:
   memory: 256M
   disk_quota: 256M
   buildpack: go_buildpack
-  command: s3-broker --config ./config.json --port $PORT
+  command: s3-broker --config ./config.yml --port $PORT
 env:
-  GOVERSION: go1.7
+  GOVERSION: go1.8
   AWS_ACCESS_KEY_ID: "your-aws-access-key-id"
   AWS_SECRET_ACCESS_KEY: "your-aws-secret-access-key"

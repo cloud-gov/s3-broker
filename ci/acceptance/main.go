@@ -53,16 +53,40 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	svc := s3.New(sess)
 
+	bucket := creds["bucket"].(string)
+	additionalBuckets := []string{}
+	for _, additionalBucket := range creds["additional_buckets"].([]interface{}) {
+		additionalBuckets = append(additionalBuckets, additionalBucket.(string))
+	}
+
+	if os.Getenv("ADDITIONAL_INSTANCE_NAME") != "" {
+		if len(additionalBuckets) != 1 {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	buckets := append(additionalBuckets, bucket)
+
+	for _, bucket := range buckets {
+		if err := testBucket(bucket, svc); err != nil {
+			log.Println(err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func testBucket(bucket string, svc *s3.S3) error {
 	// Test put object
-	_, err = svc.PutObject(&s3.PutObjectInput{
+	if _, err := svc.PutObject(&s3.PutObjectInput{
 		Body:   strings.NewReader(value),
 		Bucket: aws.String(creds["bucket"].(string)),
 		Key:    aws.String(key),
-	})
-	if err != nil {
-		log.Println(err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	}); err != nil {
+		return err
 	}
 
 	// Test get object
@@ -71,17 +95,16 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		Key:    aws.String(key),
 	})
 	if err != nil {
-		log.Println(err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return err
 	}
 
 	// Test object contents
 	body, err := ioutil.ReadAll(result.Body)
+	if err != nil {
+		return err
+	}
 	if string(body) != value {
-		log.Println(err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return fmt.Errorf("Got value %s; expected %s", string(body), value)
 	}
 
 	// Test public access
@@ -98,21 +121,16 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		expectedCode = http.StatusOK
 	}
 	if resp.StatusCode != expectedCode {
-		log.Println(fmt.Sprintf("expected code %d; got %d", expectedCode, resp.StatusCode))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return fmt.Errorf("expected code %d; got %d", expectedCode, resp.StatusCode)
 	}
 
 	// Test delete object
-	_, err = svc.DeleteObject(&s3.DeleteObjectInput{
+	if _, err = svc.DeleteObject(&s3.DeleteObjectInput{
 		Bucket: aws.String(creds["bucket"].(string)),
 		Key:    aws.String(key),
-	})
-	if err != nil {
-		log.Println(err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	}); err != nil {
+		return err
 	}
 
-	w.WriteHeader(http.StatusOK)
+	return nil
 }

@@ -22,10 +22,10 @@ $ git clone https://github.com/cloudfoundry-community/s3-broker.git
 $ cd s3-broker
 ```
 
-Modify the [included manifest file](https://github.com/cloudfoundry-community/s3-broker/blob/master/manifest.yml) to include your AWS credentials and optionally the [sample configuration file](https://github.com/cloudfoundry-community/s3-broker/blob/master/config-sample.json). Then you can push the broker to your [Cloud Foundry](https://www.cloudfoundry.org/) environment:
+Modify the [included manifest file](https://github.com/cloudfoundry-community/s3-broker/blob/master/manifest.yml) to include your AWS credentials and optionally the [sample configuration file](https://github.com/cloudfoundry-community/s3-broker/blob/master/config-sample.yml). Then you can push the broker to your [Cloud Foundry](https://www.cloudfoundry.org/) environment:
 
 ```
-$ cp config-sample.json config.json
+$ cp config-sample.yml config.yml
 $ cf push elasticache-broker
 ```
 
@@ -40,7 +40,7 @@ $ docker run -d --name s3-broker -p 3000:3000 \
   apefactory/s3-broker
 ```
 
-The Docker image cames with an [embedded sample configuration file](https://github.com/cloudfoundry-community/s3-broker/blob/master/config-sample.json). If you want to override it, you can create the Docker image with you custom configuration file by running:
+The Docker image cames with an [embedded sample configuration file](https://github.com/cloudfoundry-community/s3-broker/blob/master/config-sample.yml). If you want to override it, you can create the Docker image with you custom configuration file by running:
 
 ```
 $ git clone https://github.com/cloudfoundry-community/s3-broker.git

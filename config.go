@@ -1,20 +1,36 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 
 	"github.com/cloudfoundry-community/s3-broker/broker"
+	"golang.org/x/oauth2"
+	"gopkg.in/yaml.v2"
 )
 
 type Config struct {
-	LogLevel string        `json:"log_level"`
-	Username string        `json:"username"`
-	Password string        `json:"password"`
-	S3Config broker.Config `json:"s3_config"`
+	LogLevel string        `yaml:"log_level"`
+	Username string        `yaml:"username"`
+	Password string        `yaml:"password"`
+	S3Config broker.Config `yaml:"s3_config"`
+	CFConfig CFConfig      `yaml:"cf_config"`
+}
+
+type CFConfig struct {
+	ApiAddress        string `yaml:"api_url"`
+	Username          string `yaml:"user"`
+	Password          string `yaml:"password"`
+	ClientID          string `yaml:"client_id"`
+	ClientSecret      string `yaml:"client_secret"`
+	SkipSslValidation bool   `yaml:"skip_ssl_validation"`
+	HttpClient        *http.Client
+	Token             string `yaml:"auth_token"`
+	TokenSource       oauth2.TokenSource
+	UserAgent         string `yaml:"user_agent"`
 }
 
 func LoadConfig(configFile string) (config *Config, err error) {
@@ -33,7 +49,7 @@ func LoadConfig(configFile string) (config *Config, err error) {
 		return config, err
 	}
 
-	if err = json.Unmarshal(bytes, &config); err != nil {
+	if err = yaml.Unmarshal(bytes, &config); err != nil {
 		return config, err
 	}
 

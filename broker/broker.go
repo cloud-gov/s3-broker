@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"time"
 
 	"code.cloudfoundry.org/lager"
-	"github.com/mitchellh/mapstructure"
+	"github.com/cloudfoundry-community/go-cfclient"
 	"github.com/pivotal-cf/brokerapi"
 
 	"github.com/cloudfoundry-community/s3-broker/awsiam"
@@ -32,6 +33,7 @@ type S3Broker struct {
 	catalog                      Catalog
 	bucket                       awss3.Bucket
 	user                         awsiam.User
+	cfClient                     *cfclient.Client
 	logger                       lager.Logger
 }
 
@@ -39,10 +41,19 @@ type CatalogExternal struct {
 	Services []brokerapi.Service `json:"services"`
 }
 
+type Credentials struct {
+	AccessKeyID       string   `json:"access_key_id"`
+	SecretAccessKey   string   `json:"secret_access_key"`
+	Region            string   `json:"region"`
+	Bucket            string   `json:"bucket"`
+	AdditionalBuckets []string `json:"additional_buckets"`
+}
+
 func New(
 	config Config,
 	bucket awss3.Bucket,
 	user awsiam.User,
+	cfClient *cfclient.Client,
 	logger lager.Logger,
 ) *S3Broker {
 	return &S3Broker{
@@ -56,6 +67,7 @@ func New(
 		catalog:                      config.Catalog,
 		bucket:                       bucket,
 		user:                         user,
+		cfClient:                     cfClient,
 		logger:                       logger.Session("broker"),
 	}
 }
@@ -89,8 +101,8 @@ func (b *S3Broker) Provision(
 	})
 
 	provisionParameters := ProvisionParameters{}
-	if b.allowUserProvisionParameters {
-		if err := mapstructure.Decode(details.RawParameters, &provisionParameters); err != nil {
+	if b.allowUserProvisionParameters && len(details.RawParameters) > 0 {
+		if err := json.Unmarshal(details.RawParameters, &provisionParameters); err != nil {
 			return brokerapi.ProvisionedServiceSpec{}, err
 		}
 	}
@@ -122,8 +134,8 @@ func (b *S3Broker) Update(
 	})
 
 	updateParameters := UpdateParameters{}
-	if b.allowUserUpdateParameters {
-		if err := mapstructure.Decode(details.RawParameters, &updateParameters); err != nil {
+	if b.allowUserUpdateParameters && len(details.RawParameters) > 0 {
+		if err := json.Unmarshal(details.RawParameters, &updateParameters); err != nil {
 			return brokerapi.UpdateServiceSpec{}, err
 		}
 	}
@@ -166,6 +178,42 @@ func (b *S3Broker) Deprovision(
 	return brokerapi.DeprovisionServiceSpec{IsAsync: false}, nil
 }
 
+func (b *S3Broker) getBucketNames(instanceNames []string, instanceGUID, serviceGUID string) ([]string, error) {
+	bucketNames := []string{}
+
+	if len(instanceNames) == 0 {
+		return bucketNames, nil
+	}
+
+	instance, err := b.cfClient.ServiceInstanceByGuid(instanceGUID)
+	if err != nil {
+		return bucketNames, err
+	}
+
+	query := url.Values{}
+	query.Set("space_guid", instance.SpaceGuid)
+	query.Set("plan_guid", serviceGUID)
+	instances, err := b.cfClient.ListServiceInstancesByQuery(query)
+	if err != nil {
+		return bucketNames, err
+	}
+
+	instanceGUIDs := make(map[string]string, len(instanceNames))
+	for _, instance := range instances {
+		instanceGUIDs[instance.Name] = instance.Guid
+	}
+
+	for _, instanceName := range instanceNames {
+		instanceGUID, ok := instanceGUIDs[instanceName]
+		if !ok {
+			return bucketNames, fmt.Errorf("Service instance %s not found", instanceName)
+		}
+		bucketNames = append(bucketNames, b.bucketName(instanceGUID))
+	}
+
+	return bucketNames, nil
+}
+
 func (b *S3Broker) Bind(
 	context context.Context,
 	instanceID, bindingID string,
@@ -188,12 +236,48 @@ func (b *S3Broker) Bind(
 		return binding, fmt.Errorf("Service Plan '%s' not found", details.PlanID)
 	}
 
-	bucketDetails, err := b.bucket.Describe(b.bucketName(instanceID), b.awsPartition)
-	if err != nil {
-		if err == awss3.ErrBucketDoesNotExist {
-			return binding, brokerapi.ErrInstanceDoesNotExist
+	bindParameters := BindParameters{}
+	if len(details.RawParameters) > 0 {
+		if err := json.Unmarshal(details.RawParameters, &bindParameters); err != nil {
+			return binding, err
 		}
+	}
+
+	bucketNames, err := b.getBucketNames(bindParameters.AdditionalInstances, instanceID, details.ServiceID)
+	if err != nil {
 		return binding, err
+	}
+	bucketNames = append([]string{b.bucketName(instanceID)}, bucketNames...)
+
+	credentials := Credentials{AdditionalBuckets: []string{}}
+	bucketARNs := make([]string, len(bucketNames))
+	detailc, errc := make(chan awss3.BucketDetails), make(chan error)
+	for _, bucketName := range bucketNames {
+		go func(bucketName string) {
+			bucketDetails, err := b.bucket.Describe(bucketName, b.awsPartition)
+			if err != nil {
+				if err == awss3.ErrBucketDoesNotExist {
+					errc <- brokerapi.ErrInstanceDoesNotExist
+				}
+				errc <- err
+			} else {
+				detailc <- bucketDetails
+			}
+		}(bucketName)
+	}
+	for idx, _ := range bucketNames {
+		select {
+		case bucketDetails := <-detailc:
+			bucketARNs[idx] = bucketDetails.ARN
+			if bucketDetails.BucketName == b.bucketName(instanceID) {
+				credentials.Bucket = bucketDetails.BucketName
+				credentials.Region = bucketDetails.Region
+			} else {
+				credentials.AdditionalBuckets = append(credentials.AdditionalBuckets, bucketDetails.BucketName)
+			}
+		case err := <-errc:
+			return binding, err
+		}
 	}
 
 	if _, err = b.user.Create(b.userName(bindingID), b.iamPath); err != nil {
@@ -216,7 +300,7 @@ func (b *S3Broker) Bind(
 		return binding, err
 	}
 
-	policyARN, err = b.user.CreatePolicy(b.policyName(bindingID), b.iamPath, string(servicePlan.S3Properties.IamPolicy), bucketDetails.ARN)
+	policyARN, err = b.user.CreatePolicy(b.policyName(bindingID), b.iamPath, string(servicePlan.S3Properties.IamPolicy), bucketARNs)
 	if err != nil {
 		return binding, err
 	}
@@ -225,12 +309,9 @@ func (b *S3Broker) Bind(
 		return binding, err
 	}
 
-	binding.Credentials = map[string]string{
-		"access_key_id":     accessKeyID,
-		"secret_access_key": secretAccessKey,
-		"region":            bucketDetails.Region,
-		"bucket":            bucketDetails.BucketName,
-	}
+	credentials.AccessKeyID = accessKeyID
+	credentials.SecretAccessKey = secretAccessKey
+	binding.Credentials = credentials
 
 	return binding, nil
 }

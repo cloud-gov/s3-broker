@@ -12,7 +12,7 @@ RUN go get -a -installsuffix cgo -ldflags '-s' github.com/cloudfoundry-community
 
 # Add files
 ADD Dockerfile.final /go/bin/Dockerfile
-ADD config-sample.json /go/bin/config.json
+ADD config-sample.yml /go/bin/config.yml
 
 # Command to run
 CMD docker build -t apefactory/s3-broker /go/bin
