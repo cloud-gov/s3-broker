@@ -185,6 +185,10 @@ func (b *S3Broker) getBucketNames(instanceNames []string, instanceGUID, serviceG
 		return bucketNames, nil
 	}
 
+	if b.cfClient == nil {
+		return nil, errors.New("unable to get bucket names. you will need to configure a cf_client")
+	}
+
 	instance, err := b.cfClient.ServiceInstanceByGuid(instanceGUID)
 	if err != nil {
 		return bucketNames, err
