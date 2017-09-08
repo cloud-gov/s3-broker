@@ -17,7 +17,7 @@ type Config struct {
 	Username string        `yaml:"username"`
 	Password string        `yaml:"password"`
 	S3Config broker.Config `yaml:"s3_config"`
-	CFConfig CFConfig      `yaml:"cf_config"`
+	CFConfig *CFConfig     `yaml:"cf_config"`
 }
 
 type CFConfig struct {
