@@ -9,17 +9,22 @@ A sample configuration can be found at [config-sample.yml](https://github.com/cl
 | log_level  | Y        | String | Broker Log Level (DEBUG, INFO, ERROR, FATAL)
 | username   | Y        | String | Broker Auth Username
 | password   | Y        | String | Broker Auth Password
-| s3_config | Y        | Hash   | [S3 Broker configuration](https://github.com/cloudfoundry-community/s3-broker/blob/master/CONFIGURATION.md#s3-broker-configuration)
+| s3_config  | Y        | Hash   | [S3 Broker configuration](https://github.com/cloudfoundry-community/s3-broker/blob/master/CONFIGURATION.md#s3-broker-configuration)
+| cf_config  | N        | Hash   | [Cloud Foundry configuration](https://godoc.org/github.com/cloudfoundry-community/go-cfclient#Config)
 
 ## S3 Broker Configuration
 
 | Option                         | Required | Type    | Description
 |:-------------------------------|:--------:|:------- |:-----------
-| region                         | Y        | String  | SQS Region
-| cache_prefix                   | Y        | String  | Prefix to add to SQS Queue Names
-| allow_user_provision_parameters| N        | Boolean | Allow users to send arbitrary parameters on provision calls (defaults to `false`)
-| allow_user_update_parameters   | N        | Boolean | Allow users to send arbitrary parameters on update calls (defaults to `false`)
-| catalog                        | Y        | Hash    | [S3 Broker catalog](https://github.com/cloudfoundry-community/s3-broker/blob/master/CONFIGURATION.md#s3-broker-catalog)
+| region                          | Y        | String  | S3 Region
+| iam_path                        | Y        | String  | IAM path
+| user_prefix                     | Y        | String  | IAM user name prefix
+| policy_prefix                   | Y        | String  | IAM policy name prefix
+| bucket_prefix                   | Y        | String  | Bucket name prefix
+| aws_partition                   | Y        | String  | AWS partition (e.g. aws, aws-us-gov)
+| allow_user_provision_parameters | N        | Boolean | Allow users to send arbitrary parameters on provision calls (defaults to `false`)
+| allow_user_update_parameters    | N        | Boolean | Allow users to send arbitrary parameters on update calls (defaults to `false`)
+| catalog                         | Y        | Hash    | [S3 Broker catalog](https://github.com/cloudfoundry-community/s3-broker/blob/master/CONFIGURATION.md#s3-broker-catalog)
 
 ## S3 Broker catalog
 

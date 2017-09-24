@@ -1,6 +1,6 @@
 # AWS S3 Service Broker [![Build Status](https://travis-ci.org/cloudfoundry-community/s3-broker.png)](https://travis-ci.org/cloudfoundry-community/s3-broker)
 
-This is a [Cloud Foundry Service Broker](https://docs.cloudfoundry.org/services/overview.html) for [Amazon S3  ](https://aws.amazon.com/s3/).
+This is a [Cloud Foundry Service Broker](https://docs.cloudfoundry.org/services/overview.html) for [Amazon S3](https://aws.amazon.com/s3/).
 
 ## Installation
 
@@ -26,31 +26,8 @@ Modify the [included manifest file](https://github.com/cloudfoundry-community/s3
 
 ```
 $ cp config-sample.yml config.yml
-$ cf push elasticache-broker
+$ cf push s3-broker
 ```
-
-### Docker
-
-If you want to run the AWS S3 Service Broker on a Docker container, you can use the [apefactory/s3-broker](https://registry.hub.docker.com/u/apefactory/s3-broker/) Docker image.
-
-```
-$ docker run -d --name s3-broker -p 3000:3000 \
-  -e AWS_ACCESS_KEY_ID=<your-aws-access-key-id> \
-  -e AWS_SECRET_ACCESS_KEY=<your-aws-secret-access-key> \
-  apefactory/s3-broker
-```
-
-The Docker image cames with an [embedded sample configuration file](https://github.com/cloudfoundry-community/s3-broker/blob/master/config-sample.yml). If you want to override it, you can create the Docker image with you custom configuration file by running:
-
-```
-$ git clone https://github.com/cloudfoundry-community/s3-broker.git
-$ cd s3-broker
-$ bin/build-docker-image
-```
-
-### BOSH
-
-This broker can be deployed using the [AWS Service Broker BOSH Release](https://github.com/cf-platform-eng/aws-broker-boshrelease).
 
 ## Configuration
 
@@ -65,36 +42,22 @@ This broker gets the AWS credentials from the environment variables `AWS_ACCESS_
 Configure and deploy the broker using one of the above methods. Then:
 
 1. Check that your Cloud Foundry installation supports [Service Broker API Version v2.6 or greater](https://docs.cloudfoundry.org/services/api.html#changelog)
-2. [Register the broker](https://docs.cloudfoundry.org/services/managing-service-brokers.html#register-broker) within your Cloud Foundry installation;
-3. [Make Services and Plans public](https://docs.cloudfoundry.org/services/access-control.html#enable-access);
-4. Depending on your Cloud Foundry settings, you migh also need to create/bind an [Application Security Group](https://docs.cloudfoundry.org/adminguide/app-sec-groups.html) to allow access to the different cluster caches.
+1. [Register the broker](https://docs.cloudfoundry.org/services/managing-service-brokers.html#register-broker) within your Cloud Foundry installation;
+1. [Make Services and Plans public](https://docs.cloudfoundry.org/services/access-control.html#enable-access);
+1. Depending on your Cloud Foundry settings, you migh also need to create/bind an [Application Security Group](https://docs.cloudfoundry.org/adminguide/app-sec-groups.html) to allow access to the different cluster caches.
 
 ### Integrating Service Instances with Applications
 
 Application Developers can start to consume the services using the standard [CF CLI commands](https://docs.cloudfoundry.org/devguide/services/managing-services.html).
 
-Depending on the [broker configuration](https://github.com/cloudfoundry-community/s3-broker/blob/master/CONFIGURATION.md#s3-broker-configuration), Application Developers can send arbitrary parameters on certain broker calls:
+#### Binding to multiple instances
 
-#### Provision
+If the operator provides credentials for a Cloud Foundry user or client with the `cloud_controller.admin_read_only` scope, users can create application bindings and service keys that grant access to additional service instances in the same Cloud Foundry space. This can be useful for copying files between buckets. 
 
-Provision calls support the following optional [arbitrary parameters](https://docs.cloudfoundry.org/devguide/services/managing-services.html#arbitrary-params-create):
+```sh
+cf bind-service my-app my-s3-instance -c '{"additional_instances": ["my-additional-s3-instance"]}'
+```
 
-| Option                       | Type    | Description
-|:-----------------------------|:------- |:-----------
-| preferred_maintenance_window | String  | The weekly time range during which system maintenance can occur (*)
-
-(*) Refer to the [Amazon S3 Documentation](https://aws.amazon.com/documentation/s3/) for more details about how to set these properties
-
-#### Update
-
-Update calls support the following optional [arbitrary parameters](https://docs.cloudfoundry.org/devguide/services/managing-services.html#arbitrary-params-update):
-
-| Option                       | Type    | Description
-|:-----------------------------|:------- |:-----------
-| apply_immediately            | Boolean | Specifies whether the modifications in this request and any pending modifications are asynchronously applied as soon as possible, regardless of the Preferred Maintenance Window setting for the DB instance (*)
-| preferred_maintenance_window | String  | The weekly time range during which system maintenance can occur (*)
-
-(*) Refer to the [Amazon S3 Documentation](https://aws.amazon.com/documentation/s3/)  for more details about how to set these properties
 ## Contributing
 
 In the spirit of [free software](http://www.fsf.org/licensing/essays/free-sw.html), **everyone** is encouraged to help improve this project.
@@ -118,10 +81,10 @@ We use the [GitHub issue tracker](https://github.com/cloudfoundry-community/s3-b
 ### Submitting a Pull Request
 
 1. Fork the project.
-2. Create a topic branch.
-3. Implement your feature or bug fix.
-4. Commit and push your changes.
-5. Submit a pull request.
+1. Create a topic branch.
+1. Implement your feature or bug fix.
+1. Commit and push your changes.
+1. Submit a pull request.
 
 ## Copyright
 
