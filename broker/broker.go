@@ -21,6 +21,10 @@ const bindingIDLogKey = "binding-id"
 const detailsLogKey = "details"
 const acceptsIncompleteLogKey = "acceptsIncomplete"
 
+var (
+	ErrNoClientConfigured = errors.New("This broker is not configured to support binding to additional instances. Contact your Cloud Foundry operator for details.")
+)
+
 type S3Broker struct {
 	iamPath                      string
 	userPrefix                   string
@@ -179,19 +183,11 @@ func (b *S3Broker) Deprovision(
 }
 
 func (b *S3Broker) getBucketNames(instanceNames []string, instanceGUID, serviceGUID string) ([]string, error) {
-	bucketNames := []string{}
-
-	if len(instanceNames) == 0 {
-		return bucketNames, nil
-	}
-
-	if b.cfClient == nil {
-		return nil, errors.New("unable to get bucket names. you will need to configure a cf_client")
-	}
+	var bucketNames []string
 
 	instance, err := b.cfClient.ServiceInstanceByGuid(instanceGUID)
 	if err != nil {
-		return bucketNames, err
+		return nil, err
 	}
 
 	query := url.Values{}
@@ -199,7 +195,7 @@ func (b *S3Broker) getBucketNames(instanceNames []string, instanceGUID, serviceG
 	query.Set("plan_guid", serviceGUID)
 	instances, err := b.cfClient.ListServiceInstancesByQuery(query)
 	if err != nil {
-		return bucketNames, err
+		return nil, err
 	}
 
 	instanceGUIDs := make(map[string]string, len(instanceNames))
@@ -210,7 +206,7 @@ func (b *S3Broker) getBucketNames(instanceNames []string, instanceGUID, serviceG
 	for _, instanceName := range instanceNames {
 		instanceGUID, ok := instanceGUIDs[instanceName]
 		if !ok {
-			return bucketNames, fmt.Errorf("Service instance %s not found", instanceName)
+			return nil, fmt.Errorf("Service instance %s not found", instanceName)
 		}
 		bucketNames = append(bucketNames, b.bucketName(instanceGUID))
 	}
@@ -247,11 +243,17 @@ func (b *S3Broker) Bind(
 		}
 	}
 
-	bucketNames, err := b.getBucketNames(bindParameters.AdditionalInstances, instanceID, details.ServiceID)
-	if err != nil {
-		return binding, err
+	bucketNames := []string{b.bucketName(instanceID)}
+	if len(bindParameters.AdditionalInstances) > 0 {
+		if b.cfClient == nil {
+			return binding, ErrNoClientConfigured
+		}
+		additionalNames, err := b.getBucketNames(bindParameters.AdditionalInstances, instanceID, details.ServiceID)
+		if err != nil {
+			return binding, err
+		}
+		bucketNames = append(bucketNames, additionalNames...)
 	}
-	bucketNames = append([]string{b.bucketName(instanceID)}, bucketNames...)
 
 	credentials := Credentials{AdditionalBuckets: []string{}}
 	bucketARNs := make([]string, len(bucketNames))
