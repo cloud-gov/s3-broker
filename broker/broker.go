@@ -46,6 +46,7 @@ type CatalogExternal struct {
 }
 
 type Credentials struct {
+	URI               string   `json:"URI"`
 	AccessKeyID       string   `json:"access_key_id"`
 	SecretAccessKey   string   `json:"secret_access_key"`
 	Region            string   `json:"region"`
@@ -182,6 +183,17 @@ func (b *S3Broker) Deprovision(
 	return brokerapi.DeprovisionServiceSpec{IsAsync: false}, nil
 }
 
+func (b *S3Broker) getBucketURI(credentials Credentials) string { 
+	var endpoint string
+	if credentials.Region == "us-east-1" {
+		endpoint = "s3.amazonaws.com"
+	} else {
+		endpoint = "s3-" + credentials.Region + ".amazonaws.com"
+	}
+	return fmt.Sprintf("s3://%s:%s@%s/%s", credentials.AccessKeyID, credentials.SecretAccessKey, endpoint, credentials.Bucket)
+}
+
+
 func (b *S3Broker) getBucketNames(instanceNames []string, instanceGUID, serviceGUID string) ([]string, error) {
 	var bucketNames []string
 
@@ -315,6 +327,7 @@ func (b *S3Broker) Bind(
 		return binding, err
 	}
 
+	credentials.URI = b.getBucketURI(credentials)
 	credentials.AccessKeyID = accessKeyID
 	credentials.SecretAccessKey = secretAccessKey
 	binding.Credentials = credentials
