@@ -71,7 +71,16 @@ func main() {
 
 	var client *cfclient.Client
 	if config.CFConfig != nil {
-		cfConfig := cfclient.Config(*config.CFConfig)
+		cfConfig := cfclient.Config{
+			ApiAddress:        config.CFConfig.ApiAddress,
+			Username:          config.CFConfig.Username,
+			Password:          config.CFConfig.Password,
+			ClientID:          config.CFConfig.ClientID,
+			ClientSecret:      config.CFConfig.ClientSecret,
+			SkipSslValidation: config.CFConfig.SkipSslValidation,
+			Token:             config.CFConfig.Token,
+			UserAgent:         config.CFConfig.UserAgent,
+		}
 		client, err = cfclient.NewClient(&cfConfig)
 		if err != nil {
 			log.Fatalf("Error creating CF client: %s", err)

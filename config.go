@@ -4,11 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 
 	"github.com/cloudfoundry-community/s3-broker/broker"
-	"golang.org/x/oauth2"
 	"gopkg.in/yaml.v2"
 )
 
@@ -27,9 +25,7 @@ type CFConfig struct {
 	ClientID          string `yaml:"client_id"`
 	ClientSecret      string `yaml:"client_secret"`
 	SkipSslValidation bool   `yaml:"skip_ssl_validation"`
-	HttpClient        *http.Client
 	Token             string `yaml:"auth_token"`
-	TokenSource       oauth2.TokenSource
 	UserAgent         string `yaml:"user_agent"`
 }
 
