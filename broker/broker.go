@@ -77,20 +77,20 @@ func New(
 	}
 }
 
-func (b *S3Broker) Services(context context.Context) []brokerapi.Service {
+func (b *S3Broker) Services(context context.Context) ([]brokerapi.Service, error) {
 	brokerCatalog, err := json.Marshal(b.catalog)
 	if err != nil {
 		b.logger.Error("marshal-error", err)
-		return []brokerapi.Service{}
+		return []brokerapi.Service{}, err
 	}
 
 	apiCatalog := CatalogExternal{}
 	if err = json.Unmarshal(brokerCatalog, &apiCatalog); err != nil {
 		b.logger.Error("unmarshal-error", err)
-		return []brokerapi.Service{}
+		return []brokerapi.Service{}, err
 	}
 
-	return apiCatalog.Services
+	return apiCatalog.Services, nil
 }
 
 func (b *S3Broker) Provision(

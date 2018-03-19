@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"net/url"
 	"strconv"
 	"time"
@@ -83,15 +84,30 @@ type AppStats struct {
 }
 
 type AppSummary struct {
-	Guid             string `json:"guid"`
-	Name             string `json:"name"`
-	ServiceCount     int    `json:"service_count"`
-	RunningInstances int    `json:"running_instances"`
-	Memory           int    `json:"memory"`
-	Instances        int    `json:"instances"`
-	DiskQuota        int    `json:"disk_quota"`
-	State            string `json:"state"`
-	Diego            bool   `json:"diego"`
+	Guid                     string                 `json:"guid"`
+	Name                     string                 `json:"name"`
+	ServiceCount             int                    `json:"service_count"`
+	RunningInstances         int                    `json:"running_instances"`
+	SpaceGuid                string                 `json:"space_guid"`
+	StackGuid                string                 `json:"stack_guid"`
+	Buildpack                string                 `json:"buildpack"`
+	DetectedBuildpack        string                 `json:"detected_buildpack"`
+	Environment              map[string]interface{} `json:"environment_json"`
+	Memory                   int                    `json:"memory"`
+	Instances                int                    `json:"instances"`
+	DiskQuota                int                    `json:"disk_quota"`
+	State                    string                 `json:"state"`
+	Command                  string                 `json:"command"`
+	PackageState             string                 `json:"package_state"`
+	HealthCheckType          string                 `json:"health_check_type"`
+	HealthCheckTimeout       int                    `json:"health_check_timeout"`
+	StagingFailedReason      string                 `json:"staging_failed_reason"`
+	StagingFailedDescription string                 `json:"staging_failed_description"`
+	Diego                    bool                   `json:"diego"`
+	DockerImage              string                 `json:"docker_image"`
+	DetectedStartCommand     string                 `json:"detected_start_command"`
+	EnableSSH                bool                   `json:"enable_ssh"`
+	DockerCredentials        map[string]interface{} `json:"docker_credentials_json"`
 }
 
 type AppEnv struct {
@@ -169,19 +185,82 @@ func (a *App) Space() (Space, error) {
 	if err != nil {
 		return Space{}, errors.Wrap(err, "Error unmarshalling body")
 	}
-	spaceResource.Entity.Guid = spaceResource.Meta.Guid
-	spaceResource.Entity.c = a.c
-	return spaceResource.Entity, nil
+	return a.c.mergeSpaceResource(spaceResource), nil
+}
+
+// ListAppsByQueryWithLimits queries totalPages app info. When totalPages is
+// less and equal than 0, it queries all app info
+// When there are no more than totalPages apps on server side, all apps info will be returned
+func (c *Client) ListAppsByQueryWithLimits(query url.Values, totalPages int) ([]App, error) {
+	return c.listApps("/v2/apps?"+query.Encode(), totalPages)
 }
 
 func (c *Client) ListAppsByQuery(query url.Values) ([]App, error) {
-	var apps []App
+	return c.listApps("/v2/apps?"+query.Encode(), -1)
+}
 
-	requestUrl := "/v2/apps?" + query.Encode()
+// GetAppByGuidNoInlineCall will fetch app info including space and orgs information
+// Without using inline-relations-depth=2 call
+func (c *Client) GetAppByGuidNoInlineCall(guid string) (App, error) {
+	var appResource AppResource
+	r := c.NewRequest("GET", "/v2/apps/"+guid)
+	resp, err := c.DoRequest(r)
+	if err != nil {
+		return App{}, errors.Wrap(err, "Error requesting apps")
+	}
+	defer resp.Body.Close()
+	resBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return App{}, errors.Wrap(err, "Error reading app response body")
+	}
+
+	err = json.Unmarshal(resBody, &appResource)
+	if err != nil {
+		return App{}, errors.Wrap(err, "Error unmarshalling app")
+	}
+	app := c.mergeAppResource(appResource)
+
+	// If no Space Information no need to check org.
+	if app.SpaceGuid != "" {
+		//Getting Spaces Resource
+		space, err := app.Space()
+		if err != nil {
+			errors.Wrap(err, "Unable to get the Space for the apps "+app.Name)
+		} else {
+			app.SpaceData.Entity = space
+
+		}
+
+		//Getting orgResource
+		org, err := app.SpaceData.Entity.Org()
+		if err != nil {
+			errors.Wrap(err, "Unable to get the Org for the apps "+app.Name)
+		} else {
+			app.SpaceData.Entity.OrgData.Entity = org
+		}
+	}
+
+	return app, nil
+}
+
+func (c *Client) ListApps() ([]App, error) {
+	q := url.Values{}
+	q.Set("inline-relations-depth", "2")
+	return c.ListAppsByQuery(q)
+}
+
+func (c *Client) ListAppsByRoute(routeGuid string) ([]App, error) {
+	return c.listApps(fmt.Sprintf("/v2/routes/%s/apps", routeGuid), -1)
+}
+
+func (c *Client) listApps(requestUrl string, totalPages int) ([]App, error) {
+	pages := 0
+	apps := []App{}
 	for {
 		var appResp AppResponse
 		r := c.NewRequest("GET", requestUrl)
 		resp, err := c.DoRequest(r)
+
 		if err != nil {
 			return nil, errors.Wrap(err, "Error requesting apps")
 		}
@@ -195,29 +274,21 @@ func (c *Client) ListAppsByQuery(query url.Values) ([]App, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "Error unmarshalling app")
 		}
-
 		for _, app := range appResp.Resources {
-			app.Entity.Guid = app.Meta.Guid
-			app.Entity.CreatedAt = app.Meta.CreatedAt
-			app.Entity.UpdatedAt = app.Meta.UpdatedAt
-			app.Entity.SpaceData.Entity.Guid = app.Entity.SpaceData.Meta.Guid
-			app.Entity.SpaceData.Entity.OrgData.Entity.Guid = app.Entity.SpaceData.Entity.OrgData.Meta.Guid
-			app.Entity.c = c
-			apps = append(apps, app.Entity)
+			apps = append(apps, c.mergeAppResource(app))
 		}
 
 		requestUrl = appResp.NextUrl
 		if requestUrl == "" {
 			break
 		}
+
+		pages += 1
+		if totalPages > 0 && pages >= totalPages {
+			break
+		}
 	}
 	return apps, nil
-}
-
-func (c *Client) ListApps() ([]App, error) {
-	q := url.Values{}
-	q.Set("inline-relations-depth", "2")
-	return c.ListAppsByQuery(q)
 }
 
 func (c *Client) GetAppInstances(guid string) (map[string]AppInstance, error) {
@@ -301,7 +372,7 @@ func (c *Client) KillAppInstance(guid string, index string) error {
 	return nil
 }
 
-func (c *Client) AppByGuid(guid string) (App, error) {
+func (c *Client) GetAppByGuid(guid string) (App, error) {
 	var appResource AppResource
 	r := c.NewRequest("GET", "/v2/apps/"+guid+"?inline-relations-depth=2")
 	resp, err := c.DoRequest(r)
@@ -318,11 +389,11 @@ func (c *Client) AppByGuid(guid string) (App, error) {
 	if err != nil {
 		return App{}, errors.Wrap(err, "Error unmarshalling app")
 	}
-	appResource.Entity.Guid = appResource.Meta.Guid
-	appResource.Entity.SpaceData.Entity.Guid = appResource.Entity.SpaceData.Meta.Guid
-	appResource.Entity.SpaceData.Entity.OrgData.Entity.Guid = appResource.Entity.SpaceData.Entity.OrgData.Meta.Guid
-	appResource.Entity.c = c
-	return appResource.Entity, nil
+	return c.mergeAppResource(appResource), nil
+}
+
+func (c *Client) AppByGuid(guid string) (App, error) {
+	return c.GetAppByGuid(guid)
 }
 
 //AppByName takes an appName, and GUIDs for a space and org, and performs
@@ -343,4 +414,25 @@ func (c *Client) AppByName(appName, spaceGuid, orgGuid string) (app App, err err
 	}
 	app = apps[0]
 	return
+}
+
+func (c *Client) DeleteApp(guid string) error {
+	resp, err := c.DoRequest(c.NewRequest("DELETE", fmt.Sprintf("/v2/apps/%s", guid)))
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != http.StatusNoContent {
+		return errors.Wrapf(err, "Error deleting app %s, response code: %d", guid, resp.StatusCode)
+	}
+	return nil
+}
+
+func (c *Client) mergeAppResource(app AppResource) App {
+	app.Entity.Guid = app.Meta.Guid
+	app.Entity.CreatedAt = app.Meta.CreatedAt
+	app.Entity.UpdatedAt = app.Meta.UpdatedAt
+	app.Entity.SpaceData.Entity.Guid = app.Entity.SpaceData.Meta.Guid
+	app.Entity.SpaceData.Entity.OrgData.Entity.Guid = app.Entity.SpaceData.Entity.OrgData.Meta.Guid
+	app.Entity.c = c
+	return app.Entity
 }

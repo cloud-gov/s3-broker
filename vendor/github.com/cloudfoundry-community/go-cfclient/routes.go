@@ -1,12 +1,14 @@
 package cfclient
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"net/http"
 	"net/url"
 
 	"github.com/pkg/errors"
-	"bytes"
 )
 
 type RoutesResponse struct {
@@ -22,8 +24,8 @@ type RoutesResource struct {
 }
 
 type RouteRequest struct {
-	DomainGuid          string `json:"domain_guid"`
-	SpaceGuid           string `json:"space_guid"`
+	DomainGuid string `json:"domain_guid"`
+	SpaceGuid  string `json:"space_guid"`
 }
 
 type Route struct {
@@ -36,7 +38,6 @@ type Route struct {
 	Port                int    `json:"port"`
 	c                   *Client
 }
-
 
 func (c *Client) CreateTcpRoute(routeRequest RouteRequest) (Route, error) {
 	routesResource, err := c.createRoute("/v2/routes?generate_port=true", routeRequest)
@@ -93,7 +94,6 @@ func (c *Client) getRoutesResponse(requestUrl string) (RoutesResponse, error) {
 	return routesResp, nil
 }
 
-
 func (c *Client) createRoute(requestUrl string, routeRequest RouteRequest) (RoutesResource, error) {
 	var routeResp RoutesResource
 	buf := bytes.NewBuffer(nil)
@@ -116,4 +116,15 @@ func (c *Client) createRoute(requestUrl string, routeRequest RouteRequest) (Rout
 		return RoutesResource{}, errors.Wrap(err, "Error unmarshalling routes")
 	}
 	return routeResp, nil
+}
+
+func (c *Client) DeleteRoute(guid string) error {
+	resp, err := c.DoRequest(c.NewRequest("DELETE", fmt.Sprintf("/v2/routes/%s", guid)))
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != http.StatusNoContent {
+		return errors.Wrapf(err, "Error deleting route %s, response code: %d", guid, resp.StatusCode)
+	}
+	return nil
 }
