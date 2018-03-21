@@ -16,6 +16,7 @@ type BucketDetails struct {
 	ARN          string
 	Region       string
 	Policy       string
+	Encryption   string
 	AwsPartition string
 	Tags         map[string]string
 }
