@@ -1,0 +1,7 @@
+applications:
+- name: acceptance-test
+  buildpack: go_buildpack
+  command: acceptance-test
+  memory: 128M
+  env:
+    GOPACKAGENAME: acceptance-test
