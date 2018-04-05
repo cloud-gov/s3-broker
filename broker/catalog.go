@@ -36,6 +36,7 @@ type ServicePlan struct {
 type S3Properties struct {
 	IamPolicy    string `yaml:"iam_policy,omitempty"`
 	BucketPolicy string `yaml:"bucket_policy,omitempty"`
+	Encryption   string `yaml:"encryption,omitempty"`
 }
 
 func (c Catalog) Validate() error {

@@ -2,6 +2,7 @@ package awss3
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"text/template"
@@ -64,6 +65,27 @@ func (s *S3Bucket) Create(bucketName string, bucketDetails BucketDetails) (strin
 		return "", err
 	}
 	s.logger.Debug("create-bucket", lager.Data{"output": createBucketOutput})
+
+	if len(bucketDetails.Encryption) > 0 {
+		var encryptionConfig s3.ServerSideEncryptionConfiguration
+		if err := json.Unmarshal([]byte(bucketDetails.Encryption), &encryptionConfig); err != nil {
+			return "", err
+		}
+		putEncryptionInput := &s3.PutBucketEncryptionInput{
+			Bucket: aws.String(bucketName),
+			ServerSideEncryptionConfiguration: &encryptionConfig,
+		}
+		s.logger.Debug("put-bucket-encryption", lager.Data{"input": putEncryptionInput})
+		putEncryptionOutput, err := s.s3svc.PutBucketEncryption(putEncryptionInput)
+		if err != nil {
+			s.logger.Error("aws-s3-error", err)
+			if awsErr, ok := err.(awserr.Error); ok {
+				return "", errors.New(awsErr.Code() + ": " + awsErr.Message())
+			}
+			return "", err
+		}
+		s.logger.Debug("put-bucket-encryption", lager.Data{"output": putEncryptionOutput})
+	}
 
 	if len(bucketDetails.Policy) > 0 {
 		bucketDetails.BucketName = bucketName

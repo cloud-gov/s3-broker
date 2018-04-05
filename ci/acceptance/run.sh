@@ -1,8 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 
-set -e
-set -u
-set -x
+set -eux
 
 teardown() {
   cf delete -f ${APP_NAME}
@@ -18,12 +16,14 @@ cf api ${CF_API_URL}
 
 cf target -o ${CF_ORGANIZATION} -s ${CF_SPACE}
 
-path=$(cd $(dirname $0); pwd -P)
-cf push ${APP_NAME} -p ${path} -m ${MEMORY_LIMIT:-"128M"} --no-start
+pushd broker-src/ci/acceptance
+  cf push ${APP_NAME} -m ${MEMORY_LIMIT:-"128M"} --no-start
+popd
 
-cf set-env ${APP_NAME} SERVICE_NAME ${SERVICE_NAME}
-cf set-env ${APP_NAME} IS_PUBLIC ${IS_PUBLIC:-"false"}
-cf set-env ${APP_NAME} ADDITIONAL_INSTANCE_NAME "${ADDITIONAL_INSTANCE_NAME:-}"
+cf set-env "${APP_NAME}" SERVICE_NAME "${SERVICE_NAME}"
+cf set-env "${APP_NAME}" IS_PUBLIC "${IS_PUBLIC:-"false"}"
+cf set-env "${APP_NAME}" ADDITIONAL_INSTANCE_NAME "${ADDITIONAL_INSTANCE_NAME:-}"
+cf set-env "${APP_NAME}" ENCRYPTION "${ENCRYPTION:-""}"
 cf create-service ${SERVICE_NAME} ${PLAN_NAME} ${SERVICE_INSTANCE_NAME}
 if [ -n "${ADDITIONAL_INSTANCE_NAME:-}" ]; then
   cf create-service ${SERVICE_NAME} ${PLAN_NAME} ${ADDITIONAL_INSTANCE_NAME}

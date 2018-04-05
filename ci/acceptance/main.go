@@ -1,11 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"reflect"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -130,6 +132,23 @@ func testBucket(bucket string, svc *s3.S3) error {
 		Key:    aws.String(key),
 	}); err != nil {
 		return err
+	}
+
+	expectedEncryption := os.Getenv("ENCRYPTION")
+	if expectedEncryption != "" {
+		var expectedConfig s3.ServerSideEncryptionConfiguration
+		if err := json.Unmarshal([]byte(expectedEncryption), &expectedConfig); err != nil {
+			return err
+		}
+		encryptionOutput, err := svc.GetBucketEncryption(&s3.GetBucketEncryptionInput{
+			Bucket: aws.String(creds["bucket"].(string)),
+		})
+		if err != nil {
+			return err
+		}
+		if !reflect.DeepEqual(expectedConfig, *encryptionOutput.ServerSideEncryptionConfiguration) {
+			return fmt.Errorf("expected encryption config %+v; got %+v", expectedConfig, encryptionOutput.ServerSideEncryptionConfiguration)
+		}
 	}
 
 	return nil

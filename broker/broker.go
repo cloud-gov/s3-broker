@@ -408,6 +408,7 @@ func (b *S3Broker) createBucket(instanceID string, servicePlan ServicePlan, prov
 	bucketDetails := b.bucketFromPlan(servicePlan)
 	bucketDetails.Tags = b.bucketTags("Created", details.ServiceID, details.PlanID, details.OrganizationGUID, details.SpaceGUID)
 	bucketDetails.Policy = string(servicePlan.S3Properties.BucketPolicy)
+	bucketDetails.Encryption = string(servicePlan.S3Properties.Encryption)
 	bucketDetails.AwsPartition = b.awsPartition
 	return bucketDetails
 }
