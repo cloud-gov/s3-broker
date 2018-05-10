@@ -71,6 +71,16 @@ func (c Catalog) FindServicePlan(planID string) (plan ServicePlan, found bool) {
 	return plan, false
 }
 
+func (c Catalog) ListServicePlans() []ServicePlan {
+	var plans []ServicePlan
+	for _, service := range c.Services {
+		for _, plan := range service.Plans {
+			plans = append(plans, plan)
+		}
+	}
+	return plans
+}
+
 func (s Service) Validate() error {
 	if s.ID == "" {
 		return fmt.Errorf("Must provide a non-empty ID (%+v)", s)
