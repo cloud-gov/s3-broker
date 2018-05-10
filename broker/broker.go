@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"code.cloudfoundry.org/lager"
@@ -195,7 +196,7 @@ func (b *S3Broker) GetBucketURI(credentials Credentials) string {
 		endpoint, credentials.Bucket)
 }
 
-func (b *S3Broker) getBucketNames(instanceNames []string, instanceGUID, serviceGUID string) ([]string, error) {
+func (b *S3Broker) getBucketNames(instanceNames []string, instanceGUID string, planIDs []string) ([]string, error) {
 	var bucketNames []string
 
 	instance, err := b.cfClient.ServiceInstanceByGuid(instanceGUID)
@@ -203,9 +204,21 @@ func (b *S3Broker) getBucketNames(instanceNames []string, instanceGUID, serviceG
 		return nil, err
 	}
 
+	planQuery := url.Values{}
+	planQuery.Add("q", fmt.Sprintf("unique_id IN %s", strings.Join(planIDs, ",")))
+	plans, err := b.cfClient.ListServicePlansByQuery(planQuery)
+	if err != nil {
+		return nil, err
+	}
+
+	var planGUIDs []string
+	for _, plan := range plans {
+		planGUIDs = append(planGUIDs, plan.Guid)
+	}
+
 	query := url.Values{}
-	query.Set("space_guid", instance.SpaceGuid)
-	query.Set("plan_guid", serviceGUID)
+	query.Add("q", fmt.Sprintf("space_guid:%s", instance.SpaceGuid))
+	query.Add("q", fmt.Sprintf("service_plan_guid IN %s", strings.Join(planGUIDs, ",")))
 	instances, err := b.cfClient.ListServiceInstancesByQuery(query)
 	if err != nil {
 		return nil, err
@@ -261,7 +274,11 @@ func (b *S3Broker) Bind(
 		if b.cfClient == nil {
 			return binding, ErrNoClientConfigured
 		}
-		additionalNames, err := b.getBucketNames(bindParameters.AdditionalInstances, instanceID, details.ServiceID)
+		var planIDs []string
+		for _, plan := range b.catalog.ListServicePlans() {
+			planIDs = append(planIDs, plan.ID)
+		}
+		additionalNames, err := b.getBucketNames(bindParameters.AdditionalInstances, instanceID, planIDs)
 		if err != nil {
 			return binding, err
 		}
