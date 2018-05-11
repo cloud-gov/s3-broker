@@ -66,6 +66,19 @@ func (s *S3Bucket) Create(bucketName string, bucketDetails BucketDetails) (strin
 	}
 	s.logger.Debug("create-bucket", lager.Data{"output": createBucketOutput})
 
+	var tags []*s3.Tag
+	for key, value := range bucketDetails.Tags {
+		tags = append(tags, &s3.Tag{Key: aws.String(key), Value: aws.String(value)})
+	}
+	if _, err := s.s3svc.PutBucketTagging(&s3.PutBucketTaggingInput{
+		Bucket: aws.String(bucketName),
+		Tagging: &s3.Tagging{
+			TagSet: tags,
+		},
+	}); err != nil {
+		return "", err
+	}
+
 	if len(bucketDetails.Encryption) > 0 {
 		var encryptionConfig s3.ServerSideEncryptionConfiguration
 		if err := json.Unmarshal([]byte(bucketDetails.Encryption), &encryptionConfig); err != nil {
