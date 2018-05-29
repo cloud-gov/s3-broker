@@ -44,7 +44,7 @@ Configure and deploy the broker using one of the above methods. Then:
 1. Check that your Cloud Foundry installation supports [Service Broker API Version v2.6 or greater](https://docs.cloudfoundry.org/services/api.html#changelog)
 1. [Register the broker](https://docs.cloudfoundry.org/services/managing-service-brokers.html#register-broker) within your Cloud Foundry installation;
 1. [Make Services and Plans public](https://docs.cloudfoundry.org/services/access-control.html#enable-access);
-1. Depending on your Cloud Foundry settings, you migh also need to create/bind an [Application Security Group](https://docs.cloudfoundry.org/adminguide/app-sec-groups.html) to allow access to the different cluster caches.
+1. Depending on your Cloud Foundry settings, you might also need to create/bind an [Application Security Group](https://docs.cloudfoundry.org/adminguide/app-sec-groups.html) to allow access to the different cluster caches.
 
 ### Integrating Service Instances with Applications
 
