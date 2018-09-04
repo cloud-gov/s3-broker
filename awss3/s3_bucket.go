@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
 type S3Bucket struct {
@@ -143,7 +144,10 @@ func (s *S3Bucket) Delete(bucketName string) error {
 		Bucket: aws.String(bucketName),
 	}
 	s.logger.Debug("delete-bucket", lager.Data{"input": deleteBucketInput})
-
+	contentDeleteErr = deleteBucketContents(bucketName)
+	if contentDeleteErr != nil {
+		return contentDeleteErr
+	}
 	deleteBucketOutput, err := s.s3svc.DeleteBucket(deleteBucketInput)
 	if err != nil {
 		s.logger.Error("aws-s3-error", err)
@@ -161,6 +165,20 @@ func (s *S3Bucket) Delete(bucketName string) error {
 	s.logger.Debug("delete-bucket", lager.Data{"output": deleteBucketOutput})
 
 	return nil
+}
+
+func (s *S3Bucket) deleteBucketContents(bucketName) error {
+	iter := s3manager.NewDeleteListIterator(s3.s3svc, &s3.ListObjectsInput{
+		Bucket: aws.String(bucketName),
+	})
+
+	if err := s3manager.NewBatchDeleteWithClient(s3.s3svc).Delete(aws.BackgroundContext(), iter); err != nil {
+		s.logger.Error("aws-s3-error", err)
+		if awsErr, ok := err.(awserr.Error); ok {
+			return "", errors.New(awsErr.Code() + ": " + awsErr.Message())
+		}
+		return "", err
+	}
 }
 
 func (s3 *S3Bucket) buildBucketDetails(bucketName, region, partition string, attributes map[string]string) BucketDetails {
