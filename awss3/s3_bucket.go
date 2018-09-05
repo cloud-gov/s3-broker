@@ -144,7 +144,7 @@ func (s *S3Bucket) Delete(bucketName string) error {
 		Bucket: aws.String(bucketName),
 	}
 	s.logger.Debug("delete-bucket", lager.Data{"input": deleteBucketInput})
-	contentDeleteErr = deleteBucketContents(bucketName)
+	contentDeleteErr := s.deleteBucketContents(bucketName)
 	if contentDeleteErr != nil {
 		return contentDeleteErr
 	}
@@ -167,18 +167,19 @@ func (s *S3Bucket) Delete(bucketName string) error {
 	return nil
 }
 
-func (s *S3Bucket) deleteBucketContents(bucketName) error {
-	iter := s3manager.NewDeleteListIterator(s3.s3svc, &s3.ListObjectsInput{
+func (s *S3Bucket) deleteBucketContents(bucketName string) error {
+	iter := s3manager.NewDeleteListIterator(s.s3svc, &s3.ListObjectsInput{
 		Bucket: aws.String(bucketName),
 	})
 
-	if err := s3manager.NewBatchDeleteWithClient(s3.s3svc).Delete(aws.BackgroundContext(), iter); err != nil {
+	if err := s3manager.NewBatchDeleteWithClient(s.s3svc).Delete(aws.BackgroundContext(), iter); err != nil {
 		s.logger.Error("aws-s3-error", err)
 		if awsErr, ok := err.(awserr.Error); ok {
-			return "", errors.New(awsErr.Code() + ": " + awsErr.Message())
+			return errors.New(awsErr.Code() + ": " + awsErr.Message())
 		}
-		return "", err
+		return err
 	}
+	return nil
 }
 
 func (s3 *S3Bucket) buildBucketDetails(bucketName, region, partition string, attributes map[string]string) BucketDetails {
