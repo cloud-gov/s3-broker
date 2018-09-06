@@ -52,10 +52,9 @@ var _ = Describe("IAM User", func() {
 		var (
 			properUserDetails UserDetails
 
-			getUser       *iam.User
-			getUserInput  *iam.GetUserInput
-			getUserOutput *iam.GetUserOutput
-			getUserError  error
+			getUser      *iam.User
+			getUserInput *iam.GetUserInput
+			getUserError error
 		)
 
 		BeforeEach(func() {
@@ -72,7 +71,6 @@ var _ = Describe("IAM User", func() {
 			getUserInput = &iam.GetUserInput{
 				UserName: aws.String(userName),
 			}
-			getUserOutput = &iam.GetUserOutput{}
 			getUserError = nil
 		})
 
