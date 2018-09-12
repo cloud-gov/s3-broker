@@ -138,15 +138,17 @@ func (s *S3Bucket) Modify(bucketName string, bucketDetails BucketDetails) error 
 	return nil
 }
 
-func (s *S3Bucket) Delete(bucketName string) error {
+func (s *S3Bucket) Delete(bucketName string, deleteObjects bool) error {
 
 	deleteBucketInput := &s3.DeleteBucketInput{
 		Bucket: aws.String(bucketName),
 	}
 	s.logger.Debug("delete-bucket", lager.Data{"input": deleteBucketInput})
-	contentDeleteErr := s.deleteBucketContents(bucketName)
-	if contentDeleteErr != nil {
-		return contentDeleteErr
+	if deleteObjects {
+		contentDeleteErr := s.deleteBucketContents(bucketName)
+		if contentDeleteErr != nil {
+			return contentDeleteErr
+		}
 	}
 	deleteBucketOutput, err := s.s3svc.DeleteBucket(deleteBucketInput)
 	if err != nil {

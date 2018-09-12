@@ -30,6 +30,7 @@ type ServicePlan struct {
 	Description  string                         `yaml:"description"`
 	Free         bool                           `yaml:"free"`
 	Metadata     *brokerapi.ServicePlanMetadata `yaml:"metadata,omitempty"`
+	Durable      bool                           `yaml:"durable,omitempty"`
 	S3Properties S3Properties                   `yaml:"s3_properties,omitempty"`
 }
 
