@@ -178,7 +178,7 @@ func (b *S3Broker) Deprovision(
 	if !ok {
 		return brokerapi.DeprovisionServiceSpec{}, fmt.Errorf("Service Plan '%s' not found", details.PlanID)
 	}
-	if err := b.bucket.Delete(b.bucketName(instanceID), servicePlan.Durable); err != nil {
+	if err := b.bucket.Delete(b.bucketName(instanceID), !servicePlan.Durable); err != nil {
 		if err == awss3.ErrBucketDoesNotExist {
 			return brokerapi.DeprovisionServiceSpec{}, brokerapi.ErrInstanceDoesNotExist
 		}
