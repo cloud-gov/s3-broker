@@ -134,15 +134,6 @@ func testBucket(bucket string, svc *s3.S3) error {
 		return err
 	}
 
-	// Leave object in bucket
-	if _, err := svc.PutObject(&s3.PutObjectInput{
-		Body:   strings.NewReader(value),
-		Bucket: aws.String(creds["bucket"].(string)),
-		Key:    aws.String(key),
-	}); err != nil {
-		return err
-	}
-
 	expectedEncryption := os.Getenv("ENCRYPTION")
 	if expectedEncryption != "" {
 		var expectedConfig s3.ServerSideEncryptionConfiguration
