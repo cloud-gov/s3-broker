@@ -25,13 +25,13 @@ type Service struct {
 }
 
 type ServicePlan struct {
-	ID           string                         `yaml:"id"`
-	Name         string                         `yaml:"name"`
-	Description  string                         `yaml:"description"`
-	Free         bool                           `yaml:"free"`
-	Metadata     *brokerapi.ServicePlanMetadata `yaml:"metadata,omitempty"`
-	Durable      bool                           `yaml:"durable,omitempty"`
-	S3Properties S3Properties                   `yaml:"s3_properties,omitempty"`
+	ID            string                         `yaml:"id"`
+	Name          string                         `yaml:"name"`
+	Description   string                         `yaml:"description"`
+	Free          bool                           `yaml:"free"`
+	Metadata      *brokerapi.ServicePlanMetadata `yaml:"metadata,omitempty"`
+	PlanDeletable bool                           `yaml:"deletable,omitempty"`
+	S3Properties  S3Properties                   `yaml:"s3_properties,omitempty"`
 }
 
 type S3Properties struct {
