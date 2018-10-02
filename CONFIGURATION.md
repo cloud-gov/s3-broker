@@ -69,7 +69,7 @@ Please refer to the [Catalog Documentation](https://docs.cloudfoundry.org/servic
 | metadata.costs       | N        | Cost Object   | An array-of-objects that describes the costs of a service, in what currency, and the unit of measure
 | metadata.displayName | N        | String        | Name of the plan to be display in graphical clients
 | free                 | N        | Boolean       | This field allows the plan to be limited by the non_basic_services_allowed field in a Cloud Foundry Quota
-| deletable            | N        | Boolean       | If true the bucket contents will be automatically removed when the service instances is deleted.  If false (the default) an error will be raised if the bucket is not empty and the delete will fail.
+| deletable            | N        | Boolean       | If true the bucket contents will be automatically removed when the service instance is deleted.  If false (the default) an error will be raised if the bucket is not empty and the delete will fail.
 | s3_properties        | Y        | S3Properties  | [S3 Properties](https://github.com/cloudfoundry-community/s3-broker/blob/master/CONFIGURATION.md#s3-properties)
 
 ## S3 Properties
