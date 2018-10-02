@@ -20,6 +20,7 @@ popd
 
 cf set-env "${APP_NAME}" SERVICE_NAME "${SERVICE_NAME}"
 cf set-env "${APP_NAME}" IS_PUBLIC "${IS_PUBLIC:-"false"}"
+cf set-env "${APP_NAME}" IS_DELETE "${IS_DELETE:-"false"}"
 cf set-env "${APP_NAME}" ADDITIONAL_INSTANCE_NAME "${ADDITIONAL_INSTANCE_NAME:-}"
 cf set-env "${APP_NAME}" ENCRYPTION "${ENCRYPTION:-""}"
 cf create-service "${SERVICE_NAME}" "${PLAN_NAME}" "${SERVICE_INSTANCE_NAME}"

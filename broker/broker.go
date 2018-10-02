@@ -174,7 +174,11 @@ func (b *S3Broker) Deprovision(
 		acceptsIncompleteLogKey: asyncAllowed,
 	})
 
-	if err := b.bucket.Delete(b.bucketName(instanceID)); err != nil {
+	servicePlan, ok := b.catalog.FindServicePlan(details.PlanID)
+	if !ok {
+		return brokerapi.DeprovisionServiceSpec{}, fmt.Errorf("Service Plan '%s' not found", details.PlanID)
+	}
+	if err := b.bucket.Delete(b.bucketName(instanceID), servicePlan.PlanDeletable); err != nil {
 		if err == awss3.ErrBucketDoesNotExist {
 			return brokerapi.DeprovisionServiceSpec{}, brokerapi.ErrInstanceDoesNotExist
 		}
