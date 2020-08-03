@@ -189,6 +189,7 @@ func (s3 *S3Bucket) buildBucketDetails(bucketName, region, partition string, att
 		BucketName: bucketName,
 		Region:     region,
 		ARN:        fmt.Sprintf("arn:%s:s3:::%s", partition, bucketName),
+		FIPSEndpoint: fmt.Sprintf("s3-fips.%s.amazonaws.com", region),
 	}
 }
 
