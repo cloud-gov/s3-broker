@@ -52,6 +52,7 @@ type Credentials struct {
 	SecretAccessKey   string   `json:"secret_access_key"`
 	Region            string   `json:"region"`
 	Bucket            string   `json:"bucket"`
+	FIPSEndpoint      string   `json:"fips_endpoint"`
 	AdditionalBuckets []string `json:"additional_buckets"`
 }
 
@@ -312,6 +313,7 @@ func (b *S3Broker) Bind(
 			if bucketDetails.BucketName == b.bucketName(instanceID) {
 				credentials.Bucket = bucketDetails.BucketName
 				credentials.Region = bucketDetails.Region
+				credentials.FIPSEndpoint = bucketDetails.FIPSEndpoint
 			} else {
 				credentials.AdditionalBuckets = append(credentials.AdditionalBuckets, bucketDetails.BucketName)
 			}

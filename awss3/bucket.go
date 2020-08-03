@@ -19,6 +19,7 @@ type BucketDetails struct {
 	Encryption   string
 	AwsPartition string
 	Tags         map[string]string
+	FIPSEndpoint string
 }
 
 var (
