@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"log"
@@ -11,7 +12,6 @@ import (
 	"code.cloudfoundry.org/lager"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/cloudfoundry-community/go-cfclient"
 	"github.com/pivotal-cf/brokerapi"
@@ -61,13 +61,26 @@ func main() {
 	logger := buildLogger(config.LogLevel)
 
 	awsConfig := aws.NewConfig().WithRegion(config.S3Config.Region)
+	if config.S3Config.Endpoint != "" {
+		fmt.Printf("Using alternate endpoint: %s\n", config.S3Config.Endpoint)
+		awsConfig.WithEndpoint(config.S3Config.Endpoint)
+	}
+	if config.S3Config.InsecureSkipVerify {
+		fmt.Printf("Setting connection to insecure (do not validate certificates)\n")
+		customTransport := http.DefaultTransport.(*http.Transport).Clone()
+		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: config.S3Config.InsecureSkipVerify}
+		customClient := &http.Client{Transport: customTransport}
+		awsConfig.WithHTTPClient(customClient)
+	}
 	awsSession := session.New(awsConfig)
 
 	s3svc := s3.New(awsSession)
 	s3bucket := awss3.NewS3Bucket(s3svc, logger)
 
-	iamsvc := iam.New(awsSession)
-	user := awsiam.NewIAMUser(iamsvc, logger)
+	user, err := awsiam.NewUser(config.S3Config.Provider, logger, awsSession, config.S3Config.Endpoint, config.S3Config.InsecureSkipVerify)
+	if err != nil {
+		log.Fatalf("Failure to configure user management: %s", err)
+	}
 
 	var client *cfclient.Client
 	if config.CFConfig != nil {
