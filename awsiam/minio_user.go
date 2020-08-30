@@ -1,13 +1,5 @@
 package awsiam
 
-// TODO:
-// AWS IAM has -
-//		S3 Bucket => User => AccessKEY
-// MinIO does not have this structure, so ... this?
-//		MinIO Bucket => Disabled User with Policy => Enabled User with Policy
-//		to enable finding of "access keys" tied to a policy/bucket/user, use groups?
-// MinIO does have an access key, however, it is time limited and unclear what its lifespan is and we have to *be* that user...
-
 import (
 	"bytes"
 	"context"
@@ -43,10 +35,10 @@ func NewMinioUser(
 	secretKey string,
 	secure bool,
 	customTransport http.RoundTripper,
-) (*MinioUser, error) {
+) *MinioUser {
 	madmClnt, err := newMinioAdminClient(endpoint, accessKey, secretKey, secure, customTransport)
 	if err != nil {
-		return nil, err
+		logger.Fatal("unable to create MinIO admin client", err)
 	}
 
 	return &MinioUser{
@@ -57,7 +49,7 @@ func NewMinioUser(
 		secretKey:       secretKey,
 		secure:          secure,
 		customTransport: customTransport,
-	}, nil
+	}
 }
 
 func newMinioAdminClient(endpoint, accessKey, secretKey string, secure bool, customTransport http.RoundTripper) (*madmin.AdminClient, error) {
@@ -110,12 +102,15 @@ func (i *MinioUser) Create(userName, iamPath string) (string, error) {
 }
 
 func (i *MinioUser) Delete(userName string) error {
+	i.logger.Debug("delete-user", lager.Data{"userName": userName})
+
 	err := i.madmClnt.RemoveUser(context.Background(), userName)
 	if err != nil {
 		i.logger.Error("minio-error", err)
 		return err
 	}
-	i.logger.Debug("delete-user", lager.Data{"userName": userName})
+
+	i.logger.Debug("delete-user", lager.Data{"output": userName})
 
 	return nil
 }
@@ -125,13 +120,13 @@ func (i *MinioUser) createUserClient(userName string) (*madmin.AdminClient, erro
 	// ... so we just set it again so we can auth to it and create a key!
 	secretKey, err := password.Generate(64, 10, 0, false, true)
 	if err != nil {
-		i.logger.Error("password-generator", err)
+		i.logger.Error("createUserClient/password-generator", err)
 		return nil, err
 	}
 
 	err = i.madmClnt.SetUser(context.Background(), userName, secretKey, madmin.AccountEnabled)
 	if err != nil {
-		i.logger.Error("minio-error", err)
+		i.logger.Error("createUserClient/minio-error", err)
 		return nil, err
 	}
 
@@ -140,6 +135,8 @@ func (i *MinioUser) createUserClient(userName string) (*madmin.AdminClient, erro
 }
 
 func (i *MinioUser) ListAccessKeys(userName string) ([]string, error) {
+	i.logger.Debug("list-access-keys", lager.Data{"input": userName})
+
 	var accessKeys []string
 
 	// Connect as alternate user
@@ -158,29 +155,6 @@ func (i *MinioUser) ListAccessKeys(userName string) ([]string, error) {
 	i.logger.Debug("list-access-keys", lager.Data{"output": accounts.Accounts})
 
 	return accounts.Accounts, nil
-
-	// info, err := i.madmClnt.GetUserInfo(context.Background(), userName)
-	// if err != nil {
-	// 	i.logger.Error("minio-error", err)
-	// 	return accessKeys, err
-	// }
-
-	// for _, groupName := range info.MemberOf {
-	// 	groupDesc, err := i.madmClnt.GetGroupDescription(context.Background(), groupName)
-	// 	if err != nil {
-	// 		i.logger.Error("minio-error", err)
-	// 		return accessKeys, err
-	// 	}
-
-	// 	for _, member := range groupDesc.Members {
-	// 		// FIXME?
-	// 		accessKeys = append(accessKeys, member)
-	// 	}
-	// }
-
-	// i.logger.Debug("list-access-keys", lager.Data{"output": accessKeys})
-
-	// return accessKeys, nil
 }
 
 func (i *MinioUser) CreateAccessKey(userName string) (string, string, error) {
@@ -192,10 +166,13 @@ func (i *MinioUser) CreateAccessKey(userName string) (string, string, error) {
 		return "", "", err
 	}
 
-	policy, err := i.madmClnt.InfoCannedPolicy(context.Background(), info.PolicyName)
-	if err != nil {
-		i.logger.Error("minio-error", err)
-		return "", "", err
+	var policy *iampolicy.Policy
+	if info.PolicyName != "" {
+		policy, err = i.madmClnt.InfoCannedPolicy(context.Background(), info.PolicyName)
+		if err != nil {
+			i.logger.Error("minio-error", err)
+			return "", "", err
+		}
 	}
 
 	// Connect as alternate user
@@ -211,7 +188,7 @@ func (i *MinioUser) CreateAccessKey(userName string) (string, string, error) {
 		return "", "", err
 	}
 
-	i.logger.Debug("create-access-keys", lager.Data{"output": creds.AccessKey})
+	i.logger.Debug("create-access-key", lager.Data{"output": creds.AccessKey})
 
 	return creds.AccessKey, creds.SecretKey, nil
 }
@@ -238,6 +215,8 @@ func (i *MinioUser) DeleteAccessKey(userName, accessKeyID string) error {
 }
 
 func (i *MinioUser) CreatePolicy(policyName, iamPath, policyTemplate string, resources []string) (string, error) {
+	i.logger.Debug("create-policy", lager.Data{"policyName": policyName, "iamPath": iamPath, "policyTemplate": policyTemplate, "resources": resources})
+
 	tmpl, err := template.New("policy").Funcs(template.FuncMap{
 		"resources": func(suffix string) string {
 			resourcePaths := make([]string, len(resources))
@@ -249,7 +228,7 @@ func (i *MinioUser) CreatePolicy(policyName, iamPath, policyTemplate string, res
 		},
 	}).Parse(policyTemplate)
 	if err != nil {
-		i.logger.Error("minio-error", err)
+		i.logger.Error("parse-error", err)
 		return "", err
 	}
 	policy := bytes.Buffer{}
@@ -258,14 +237,14 @@ func (i *MinioUser) CreatePolicy(policyName, iamPath, policyTemplate string, res
 		"Resources": resources,
 	})
 	if err != nil {
-		i.logger.Error("minio-error", err)
+		i.logger.Error("template-error", err)
 		return "", err
 	}
 
 	policyInput := iampolicy.Policy{}
 	err = json.Unmarshal(policy.Bytes(), &policyInput)
 	if err != nil {
-		i.logger.Error("minio-error", err)
+		i.logger.Error("unmarshal-error", err)
 		return "", err
 	}
 	i.logger.Debug("create-policy", lager.Data{"input": policyInput})
@@ -337,7 +316,7 @@ func (i *MinioUser) ListAttachedUserPolicies(userName, iamPath string) ([]string
 	return userPolicies, nil
 }
 
-func (i *MinioUser) AttachUserPolicy(userName string, policyARN string) error {
+func (i *MinioUser) AttachUserPolicy(userName, policyARN string) error {
 	i.logger.Debug("attach-user-policy", lager.Data{"userName": userName, "policyARN": policyARN})
 
 	policy, err := fromPolicyARN(policyARN)
@@ -352,24 +331,12 @@ func (i *MinioUser) AttachUserPolicy(userName string, policyARN string) error {
 		return err
 	}
 
-	// // Using a group to manage policy users
-	// request := madmin.GroupAddRemove{
-	// 	Group:    policy,
-	// 	Members:  []string{userName},
-	// 	IsRemove: false,
-	// }
-	// err = i.madmClnt.UpdateGroupMembers(context.Background(), request)
-	// if err != nil {
-	// 	i.logger.Error("minio-error", err)
-	// 	return err
-	// }
-
 	i.logger.Debug("attach-user-policy", lager.Data{"output": "success"})
 
 	return nil
 }
 
-func (i *MinioUser) DetachUserPolicy(userName string, policyARN string) error {
+func (i *MinioUser) DetachUserPolicy(userName, policyARN string) error {
 	i.logger.Debug("detach-user-policy", lager.Data{"userName": userName, "policyARN": policyARN})
 
 	err := i.madmClnt.SetPolicy(context.Background(), "", userName, false)
@@ -377,23 +344,6 @@ func (i *MinioUser) DetachUserPolicy(userName string, policyARN string) error {
 		i.logger.Error("minio-error", err)
 		return err
 	}
-
-	// policyName, err := fromPolicyARN(policyARN)
-	// if err != nil {
-	// 	i.logger.Error("minio-error", err)
-	// 	return err
-	// }
-
-	// request := madmin.GroupAddRemove{
-	// 	Group:    policyName,
-	// 	Members:  []string{userName},
-	// 	IsRemove: true,
-	// }
-	// err = i.madmClnt.UpdateGroupMembers(context.Background(), request)
-	// if err != nil {
-	// 	i.logger.Error("minio-error", err)
-	// 	return err
-	// }
 
 	i.logger.Debug("detach-user-policy", lager.Data{"output": "success"})
 
