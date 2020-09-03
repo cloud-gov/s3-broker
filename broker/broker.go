@@ -27,6 +27,8 @@ var (
 )
 
 type S3Broker struct {
+	endpoint                     string
+	provider                     string
 	iamPath                      string
 	userPrefix                   string
 	policyPrefix                 string
@@ -64,6 +66,8 @@ func New(
 	logger lager.Logger,
 ) *S3Broker {
 	return &S3Broker{
+		endpoint:                     config.Endpoint,
+		provider:                     config.Provider,
 		iamPath:                      config.IamPath,
 		userPrefix:                   config.UserPrefix,
 		policyPrefix:                 config.PolicyPrefix,
@@ -191,10 +195,14 @@ func (b *S3Broker) Deprovision(
 
 func (b *S3Broker) GetBucketURI(credentials Credentials) string {
 	var endpoint string
-	if credentials.Region == "us-east-1" {
-		endpoint = "s3.amazonaws.com"
+	if b.provider == "minio" {
+		endpoint = b.endpoint
 	} else {
-		endpoint = "s3-" + credentials.Region + ".amazonaws.com"
+		if credentials.Region == "us-east-1" {
+			endpoint = "s3.amazonaws.com"
+		} else {
+			endpoint = "s3-" + credentials.Region + ".amazonaws.com"
+		}
 	}
 	return fmt.Sprintf("s3://%s:%s@%s/%s",
 		url.QueryEscape(credentials.AccessKeyID), url.QueryEscape(credentials.SecretAccessKey),
