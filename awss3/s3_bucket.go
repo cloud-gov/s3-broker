@@ -86,7 +86,7 @@ func (s *S3Bucket) Create(bucketName string, bucketDetails BucketDetails) (strin
 			return "", err
 		}
 		putEncryptionInput := &s3.PutBucketEncryptionInput{
-			Bucket: aws.String(bucketName),
+			Bucket:                            aws.String(bucketName),
 			ServerSideEncryptionConfiguration: &encryptionConfig,
 		}
 		s.logger.Debug("put-bucket-encryption", lager.Data{"input": putEncryptionInput})
@@ -186,9 +186,9 @@ func (s *S3Bucket) deleteBucketContents(bucketName string) error {
 
 func (s3 *S3Bucket) buildBucketDetails(bucketName, region, partition string, attributes map[string]string) BucketDetails {
 	return BucketDetails{
-		BucketName: bucketName,
-		Region:     region,
-		ARN:        fmt.Sprintf("arn:%s:s3:::%s", partition, bucketName),
+		BucketName:   bucketName,
+		Region:       region,
+		ARN:          fmt.Sprintf("arn:%s:s3:::%s", partition, bucketName),
 		FIPSEndpoint: fmt.Sprintf("s3-fips.%s.amazonaws.com", region),
 	}
 }
