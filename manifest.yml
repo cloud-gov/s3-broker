@@ -5,6 +5,6 @@ applications:
   buildpack: go_buildpack
   command: s3-broker --config ./config.yml --port $PORT
 env:
-  GOVERSION: go1.12
+  GOVERSION: go1.14
   AWS_ACCESS_KEY_ID: "your-aws-access-key-id"
   AWS_SECRET_ACCESS_KEY: "your-aws-secret-access-key"
