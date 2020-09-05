@@ -15,6 +15,7 @@ import (
 
 	"github.com/cloudfoundry-community/s3-broker/awsiam"
 	"github.com/cloudfoundry-community/s3-broker/awss3"
+	"github.com/cloudfoundry-community/s3-broker/provider"
 )
 
 const instanceIDLogKey = "instance-id"
@@ -27,8 +28,8 @@ var (
 )
 
 type S3Broker struct {
-	endpoint                     string
-	provider                     string
+	provider                     provider.Provider
+	insecureSkipVerify           bool
 	iamPath                      string
 	userPrefix                   string
 	policyPrefix                 string
@@ -49,25 +50,28 @@ type CatalogExternal struct {
 }
 
 type Credentials struct {
-	URI               string   `json:"uri"`
-	AccessKeyID       string   `json:"access_key_id"`
-	SecretAccessKey   string   `json:"secret_access_key"`
-	Region            string   `json:"region"`
-	Bucket            string   `json:"bucket"`
-	FIPSEndpoint      string   `json:"fips_endpoint"`
-	AdditionalBuckets []string `json:"additional_buckets"`
+	URI                string   `json:"uri"`
+	InsecureSkipVerify bool     `json:"insecure_skip_verify"`
+	AccessKeyID        string   `json:"access_key_id"`
+	SecretAccessKey    string   `json:"secret_access_key"`
+	Region             string   `json:"region"`
+	Bucket             string   `json:"bucket"`
+	Endpoint           string   `json:"endpoint"`
+	FIPSEndpoint       string   `json:"fips_endpoint"`
+	AdditionalBuckets  []string `json:"additional_buckets"`
 }
 
 func New(
 	config Config,
+	provider provider.Provider,
 	bucket awss3.Bucket,
 	user awsiam.User,
 	cfClient *cfclient.Client,
 	logger lager.Logger,
 ) *S3Broker {
 	return &S3Broker{
-		endpoint:                     config.Endpoint,
-		provider:                     config.Provider,
+		provider:                     provider,
+		insecureSkipVerify:           config.InsecureSkipVerify,
 		iamPath:                      config.IamPath,
 		userPrefix:                   config.UserPrefix,
 		policyPrefix:                 config.PolicyPrefix,
@@ -194,19 +198,9 @@ func (b *S3Broker) Deprovision(
 }
 
 func (b *S3Broker) GetBucketURI(credentials Credentials) string {
-	var endpoint string
-	if b.provider == "minio" {
-		endpoint = b.endpoint
-	} else {
-		if credentials.Region == "us-east-1" {
-			endpoint = "s3.amazonaws.com"
-		} else {
-			endpoint = "s3-" + credentials.Region + ".amazonaws.com"
-		}
-	}
 	return fmt.Sprintf("s3://%s:%s@%s/%s",
 		url.QueryEscape(credentials.AccessKeyID), url.QueryEscape(credentials.SecretAccessKey),
-		endpoint, credentials.Bucket)
+		b.provider.Endpoint(), credentials.Bucket)
 }
 
 func (b *S3Broker) getBucketNames(instanceNames []string, instanceGUID string, planIDs []string) ([]string, error) {
@@ -322,6 +316,8 @@ func (b *S3Broker) Bind(
 				credentials.Bucket = bucketDetails.BucketName
 				credentials.Region = bucketDetails.Region
 				credentials.FIPSEndpoint = bucketDetails.FIPSEndpoint
+				credentials.Endpoint = b.provider.Endpoint()
+				credentials.InsecureSkipVerify = b.insecureSkipVerify
 			} else {
 				credentials.AdditionalBuckets = append(credentials.AdditionalBuckets, bucketDetails.BucketName)
 			}
