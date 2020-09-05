@@ -255,16 +255,6 @@ func (i *MinioUser) CreatePolicy(policyName, iamPath, policyTemplate string, res
 		return "", err
 	}
 
-	groupRequest := madmin.GroupAddRemove{
-		Group:    policyName,
-		IsRemove: false,
-	}
-	err = i.madmClnt.UpdateGroupMembers(context.Background(), groupRequest)
-	if err != nil {
-		i.logger.Error("minio-error", err)
-		return "", err
-	}
-
 	i.logger.Debug("create-policy", lager.Data{"output": "created"})
 
 	return toPolicyARN(policyName), nil
@@ -280,16 +270,6 @@ func (i *MinioUser) DeletePolicy(policyARN string) error {
 	}
 
 	err = i.madmClnt.RemoveCannedPolicy(context.Background(), policy)
-	if err != nil {
-		i.logger.Error("minio-error", err)
-		return err
-	}
-
-	groupRequest := madmin.GroupAddRemove{
-		Group:    policy,
-		IsRemove: true,
-	}
-	err = i.madmClnt.UpdateGroupMembers(context.Background(), groupRequest)
 	if err != nil {
 		i.logger.Error("minio-error", err)
 		return err
