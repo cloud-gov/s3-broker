@@ -19,6 +19,7 @@ import (
 	"github.com/cloudfoundry-community/s3-broker/awsiam"
 	"github.com/cloudfoundry-community/s3-broker/awss3"
 	"github.com/cloudfoundry-community/s3-broker/broker"
+	"github.com/cloudfoundry-community/s3-broker/provider"
 )
 
 var (
@@ -100,7 +101,9 @@ func main() {
 		}
 	}
 
-	serviceBroker := broker.New(config.S3Config, s3bucket, user, client, logger)
+	provider := provider.New(config.S3Config.Provider, config.S3Config.Region, config.S3Config.Endpoint)
+
+	serviceBroker := broker.New(config.S3Config, provider, s3bucket, user, client, logger)
 
 	credentials := brokerapi.BrokerCredentials{
 		Username: config.Username,

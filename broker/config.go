@@ -8,7 +8,7 @@ import (
 type Config struct {
 	Region                       string  `yaml:"region"`
 	Endpoint                     string  `yaml:"endpoint"`
-	InsecureSkipVerify           bool    `yaml:"insecure"`
+	InsecureSkipVerify           bool    `yaml:"insecure_skip_verify"`
 	Provider                     string  `yaml:"provider"`
 	IamPath                      string  `yaml:"iam_path"`
 	UserPrefix                   string  `yaml:"user_prefix"`
