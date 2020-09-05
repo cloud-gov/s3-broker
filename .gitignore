@@ -6,3 +6,4 @@ gobin/*
 *\.test
 s3-broker
 config.json
+config.yml
