@@ -292,7 +292,7 @@ func (i *MinioUser) ListAttachedUserPolicies(userName, iamPath string) ([]string
 	}
 	i.logger.Debug("list-attached-user-policies", lager.Data{"output": userInfo.PolicyName})
 
-	userPolicies = append(userPolicies, userInfo.MemberOf...)
+	userPolicies = append(userPolicies, userInfo.PolicyName)
 	return userPolicies, nil
 }
 
