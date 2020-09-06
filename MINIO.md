@@ -76,31 +76,31 @@ minio-s3  default  free  Provides a single S3 bucket with unlimited storage.
 Provising a service (creates a bucket):
 ```
 $ eden provision -s minio-s3 -p default
-provision:   minio-s3/default - name: minio-s3-default-a1efe927-390b-45ca-a6e8-e61d9e56ceeb
+provision:   minio-s3/default - name: minio-s3-default-6229d92f-346a-4ea0-99dc-3a6642f32090
 provision:   done
 ```
 
 Bind to the service (creates a user):
 ```
-$ eden bind -i minio-s3-default-a1efe927-390b-45ca-a6e8-e61d9e56ceeb
+$ eden bind -i 6229d92f-346a-4ea0-99dc-3a6642f32090
 Success
 
-Run 'eden credentials -i minio-s3-default-a1efe927-390b-45ca-a6e8-e61d9e56ceeb -b minio-s3-5998b260-bdb1-40b1-8f7f-eb6d30c375ac' to see credentials
+Run 'eden credentials -i minio-s3-default-6229d92f-346a-4ea0-99dc-3a6642f32090 -b minio-s3-e32a729b-59f5-4842-a836-758f3e1a3df2' to see credentials
 ```
 
 Show the credentials:
 ```
-$ eden credentials -i minio-s3-default-a1efe927-390b-45ca-a6e8-e61d9e56ceeb -b minio-s3-5998b260-bdb1-40b1-8f7f-eb6d30c375ac
+$ eden credentials -i minio-s3-default-6229d92f-346a-4ea0-99dc-3a6642f32090 -b minio-s3-e32a729b-59f5-4842-a836-758f3e1a3df2
 {
   "access_key_id": "an-access-key",
   "additional_buckets": [],
-  "bucket": "s3bucket-a1efe927-390b-45ca-a6e8-e61d9e56ceeb",
+  "bucket": "s3bucket-6229d92f-346a-4ea0-99dc-3a6642f32090",
   "endpoint": "s3.gdc.lan",
   "fips_endpoint": "s3-fips.us-east-1.amazonaws.com",
   "insecure_skip_verify": true,
   "region": "us-east-1",
   "secret_access_key": "sekret",
-  "uri": "s3://an-access-key:sekret@s3.gdc.lan/s3bucket-a1efe927-390b-45ca-a6e8-e61d9e56ceeb"
+  "uri": "s3://an-access-key:sekret@s3.gdc.lan/s3bucket-6229d92f-346a-4ea0-99dc-3a6642f32090"
 }
 ```
 
@@ -109,18 +109,18 @@ Eden stores the information locally and this can be seen with the services subco
 $ eden services
 Name                                                   Service   Plan     Binding                                        Broker URL
 ====                                                   =======   ====     =======                                        ==========
-minio-s3-default-a1efe927-390b-45ca-a6e8-e61d9e56ceeb  minio-s3  default  minio-s3-5998b260-bdb1-40b1-8f7f-eb6d30c375ac  http://127.0.0.1:3000
+minio-s3-default-6229d92f-346a-4ea0-99dc-3a6642f32090  minio-s3  default  minio-s3-e32a729b-59f5-4842-a836-758f3e1a3df2  http://127.0.0.1:3000
 ```
 
-To remove the binding (deletes a user):
+To remove the binding (deletes a user) - be careful and use the binding _ID_ and not the name:
 ```
-$ eden unbind -b minio-s3-5998b260-bdb1-40b1-8f7f-eb6d30c375ac -i minio-s3-default-a1efe927-390b-45ca-a6e8-e61d9e56ceeb
+$ eden unbind -i 6229d92f-346a-4ea0-99dc-3a6642f32090 -b e32a729b-59f5-4842-a836-758f3e1a3df2 
 Success
 ```
 
 To deprovision the bucket (removes the bucket):
 ```
-$ eden deprovision -i minio-s3-default-a1efe927-390b-45ca-a6e8-e61d9e56ceeb
-deprovision: minio-s3/default - guid: a1efe927-390b-45ca-a6e8-e61d9e56ceeb
+$ eden deprovision -i 6229d92f-346a-4ea0-99dc-3a6642f32090
+deprovision: minio-s3/default - guid: 6229d92f-346a-4ea0-99dc-3a6642f32090
 deprovision: done
 ```
