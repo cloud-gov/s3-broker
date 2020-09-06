@@ -251,7 +251,7 @@ func (i *MinioUser) CreatePolicy(policyName, iamPath, policyTemplate string, res
 
 	err = i.madmClnt.AddCannedPolicy(context.Background(), policyName, &policyInput)
 	if err != nil {
-		i.logger.Error("minio-error", err)
+		i.logger.Error("minio-add-policy-error", err)
 		return "", err
 	}
 
@@ -265,13 +265,13 @@ func (i *MinioUser) DeletePolicy(policyARN string) error {
 
 	policy, err := fromPolicyARN(policyARN)
 	if err != nil {
-		i.logger.Error("minio-error", err)
+		i.logger.Error("minio-arn-error", err)
 		return err
 	}
 
 	err = i.madmClnt.RemoveCannedPolicy(context.Background(), policy)
 	if err != nil {
-		i.logger.Error("minio-error", err)
+		i.logger.Error("minio-remove-policy-error", err)
 		return err
 	}
 
@@ -344,9 +344,14 @@ func fromPolicyARN(policyARN string) (string, error) {
 	return fromARN("policy", policyARN)
 }
 func fromARN(resourceType, theARN string) (string, error) {
+	// Short-circuit in case we get non-ARN's...
+	if !awsarn.IsARN(theARN) {
+		return theARN, nil
+	}
+
 	arn, err := awsarn.Parse(theARN)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	prefix := fmt.Sprintf("%s/", resourceType)
