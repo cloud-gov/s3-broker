@@ -1,6 +1,6 @@
 .vscode
 out
-pkg
+/pkg
 gobin/*
 
 *\.test
