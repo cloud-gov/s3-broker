@@ -26,6 +26,7 @@ s3_config:
         providerDisplayName: Amazon Web Services
         documentationUrl: https://aws.amazon.com/documentation/s3/
         supportUrl: https://forums.aws.amazon.com/forum.jspa?forumID=24
+        shareable: true
       plan_updateable: false
       plans:
       - id: EAAD05D8-2E01-11E5-9184-FEFF819CDC9F
