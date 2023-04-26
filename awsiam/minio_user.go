@@ -11,8 +11,8 @@ import (
 
 	"code.cloudfoundry.org/lager"
 	awsarn "github.com/aws/aws-sdk-go/aws/arn"
-	iampolicy "github.com/minio/minio/pkg/iam/policy"
-	"github.com/minio/minio/pkg/madmin"
+	madmin "github.com/minio/madmin-go"
+	iampolicy "github.com/minio/pkg/iam/policy"
 	"github.com/pkg/errors"
 	"github.com/sethvargo/go-password/password"
 )
