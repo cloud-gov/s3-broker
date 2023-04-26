@@ -11,8 +11,8 @@ import (
 
 	"code.cloudfoundry.org/lager"
 	awsarn "github.com/aws/aws-sdk-go/aws/arn"
-	iampolicy "github.com/minio/minio/pkg/iam/policy"
-	"github.com/minio/minio/pkg/madmin"
+	madmin "github.com/minio/madmin-go"
+	iampolicy "github.com/minio/pkg/iam/policy"
 	"github.com/pkg/errors"
 	"github.com/sethvargo/go-password/password"
 )
@@ -146,7 +146,7 @@ func (i *MinioUser) ListAccessKeys(userName string) ([]string, error) {
 		return accessKeys, err
 	}
 
-	accounts, err := userClient.ListServiceAccounts(context.Background())
+	accounts, err := userClient.ListServiceAccounts(context.Background(), userName)
 	if err != nil {
 		i.logger.Error("minio-error", err)
 		return accessKeys, err
@@ -168,7 +168,12 @@ func (i *MinioUser) CreateAccessKey(userName string) (string, string, error) {
 
 	var policy *iampolicy.Policy
 	if info.PolicyName != "" {
-		policy, err = i.madmClnt.InfoCannedPolicy(context.Background(), info.PolicyName)
+		b, err := i.madmClnt.InfoCannedPolicy(context.Background(), info.PolicyName)
+		if err != nil {
+			i.logger.Error("minio-error", err)
+			return "", "", err
+		}
+		err = policy.UnmarshalJSON(b)
 		if err != nil {
 			i.logger.Error("minio-error", err)
 			return "", "", err
@@ -182,7 +187,18 @@ func (i *MinioUser) CreateAccessKey(userName string) (string, string, error) {
 		return "", "", err
 	}
 
-	creds, err := userClient.AddServiceAccount(context.Background(), policy)
+	b, err := json.Marshal(policy)
+	if err != nil {
+		i.logger.Error("minio-error", err)
+		return "", "", err
+	}
+	opts := madmin.AddServiceAccountReq{
+		Policy:     json.RawMessage(b),
+		TargetUser: userName,
+		AccessKey:  i.accessKey,
+		SecretKey:  i.secretKey,
+	}
+	creds, err := userClient.AddServiceAccount(context.Background(), opts)
 	if err != nil {
 		i.logger.Error("minio-error", err)
 		return "", "", err
@@ -242,14 +258,15 @@ func (i *MinioUser) CreatePolicy(policyName, iamPath, policyTemplate string, res
 	}
 
 	policyInput := iampolicy.Policy{}
-	err = json.Unmarshal(policy.Bytes(), &policyInput)
+	b := policy.Bytes()
+	err = json.Unmarshal(b, &policyInput)
 	if err != nil {
 		i.logger.Error("unmarshal-error", err)
 		return "", err
 	}
 	i.logger.Debug("create-policy", lager.Data{"input": policyInput})
 
-	err = i.madmClnt.AddCannedPolicy(context.Background(), policyName, &policyInput)
+	err = i.madmClnt.AddCannedPolicy(context.Background(), policyName, b)
 	if err != nil {
 		i.logger.Error("minio-add-policy-error", err)
 		return "", err
