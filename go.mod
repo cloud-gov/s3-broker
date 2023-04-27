@@ -5,7 +5,7 @@ go 1.14
 require (
 	code.cloudfoundry.org/gofileutils v0.0.0-20170111115228-4d0c80011a0f // indirect
 	code.cloudfoundry.org/lager v0.0.0-20180227171535-a77e1033ba8d
-	github.com/aws/aws-sdk-go v1.29.11
+	github.com/aws/aws-sdk-go v1.34.0
 	github.com/cloudfoundry-community/go-cfclient v0.0.0-20180308150602-a2edd96f81ac
 	github.com/cloudfoundry-community/go-cfenv v1.17.0
 	github.com/cloudfoundry/gofileutils v0.0.0-20170111115228-4d0c80011a0f // indirect
