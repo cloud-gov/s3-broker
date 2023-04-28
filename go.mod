@@ -6,7 +6,6 @@ require (
 	code.cloudfoundry.org/lager v0.0.0-20180227171535-a77e1033ba8d
 	github.com/aws/aws-sdk-go v1.44.251
 	github.com/cloudfoundry-community/go-cfclient v0.0.0-20180308150602-a2edd96f81ac
-	github.com/cloudfoundry-community/go-cfenv v1.17.0
 	github.com/minio/madmin-go v1.6.6
 	github.com/minio/pkg v1.7.0
 	github.com/onsi/ginkgo v1.14.1
@@ -14,6 +13,7 @@ require (
 	github.com/pivotal-cf/brokerapi v1.0.0
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-password v0.2.0
+	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -36,7 +36,6 @@ require (
 	github.com/martini-contrib/render v0.0.0-20150707142108-ec18f8345a11 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/minio-go/v7 v7.0.52 // indirect
-	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/nxadm/tail v1.4.4 // indirect
@@ -56,7 +55,6 @@ require (
 	github.com/tklauser/numcpus v0.6.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	golang.org/x/crypto v0.8.0 // indirect
-	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53 // indirect
 	golang.org/x/net v0.9.0 // indirect
 	golang.org/x/oauth2 v0.7.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
