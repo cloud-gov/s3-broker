@@ -174,8 +174,7 @@ func (s *S3Bucket) checkDeletePublicAccessBlock(bucketDetails BucketDetails, buc
 
 	if slices.Contains(policy.Statement, publicAccessPolicy) {
 		_, err := s.s3svc.DeletePublicAccessBlock(&s3.DeletePublicAccessBlockInput{
-			Bucket:              aws.String(bucketName),
-			ExpectedBucketOwner: aws.String("TODO"),
+			Bucket: aws.String(bucketName),
 		})
 		if err != nil {
 			s.logger.Error("aws-s3-error", err)
