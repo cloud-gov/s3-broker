@@ -12,11 +12,24 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"golang.org/x/exp/slices"
 )
 
 type S3Bucket struct {
 	s3svc  *s3.S3
 	logger lager.Logger
+}
+
+type bucketPolicyStatement struct {
+	Effect    string `json:"Effect"`
+	Principal string `json:"Principal"`
+	Action    string `json:"Action"`
+	Resource  string `json:"Resource"`
+}
+
+type bucketPolicy struct {
+	Version   string                  `json:"Version"`
+	Statement []bucketPolicyStatement `json:"Statement"`
 }
 
 func NewS3Bucket(
@@ -101,6 +114,10 @@ func (s *S3Bucket) Create(bucketName string, bucketDetails BucketDetails) (strin
 		s.logger.Debug("put-bucket-encryption", lager.Data{"output": putEncryptionOutput})
 	}
 
+	if err = s.checkDeletePublicAccessBlock(bucketDetails, bucketName); err != nil {
+		return "", err
+	}
+
 	if len(bucketDetails.Policy) > 0 {
 		bucketDetails.BucketName = bucketName
 		tmpl, err := template.New("policy").Parse(bucketDetails.Policy)
@@ -131,6 +148,44 @@ func (s *S3Bucket) Create(bucketName string, bucketDetails BucketDetails) (strin
 	}
 
 	return aws.StringValue(createBucketOutput.Location), nil
+}
+
+// checkDeletePublicAccessBlock checks the Policy of bucketDetails to see if the bucket
+// is intended to be public. If so, it deletes the Public Access Block that is set on all
+// new S3 buckets by default as of April 2023.
+func (s *S3Bucket) checkDeletePublicAccessBlock(bucketDetails BucketDetails, bucketName string) error {
+	var policy bucketPolicy
+	err := json.Unmarshal([]byte(bucketDetails.Policy), &policy)
+	if err != nil {
+		s.logger.Error("aws-s3-error", err)
+		return err
+	}
+	if len(policy.Statement) > 1 {
+		err = fmt.Errorf("expected 1 policy statement, got %v", len(policy.Statement))
+		s.logger.Error("aws-s3-error", err)
+		return err
+	}
+
+	publicAccessPolicy := bucketPolicyStatement{
+		Effect:    "Allow",
+		Principal: "*",
+		Action:    "s3.GetObject",
+	}
+
+	if slices.ContainsFunc(policy.Statement, func(statement bucketPolicyStatement) bool {
+		return statement.Effect == publicAccessPolicy.Effect &&
+			statement.Principal == publicAccessPolicy.Principal &&
+			statement.Action == publicAccessPolicy.Action
+	}) {
+		_, err := s.s3svc.DeletePublicAccessBlock(&s3.DeletePublicAccessBlockInput{
+			Bucket: aws.String(bucketName),
+		})
+		if err != nil {
+			s.logger.Error("aws-s3-error", err)
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *S3Bucket) Modify(bucketName string, bucketDetails BucketDetails) error {
