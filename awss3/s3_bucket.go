@@ -172,7 +172,11 @@ func (s *S3Bucket) checkDeletePublicAccessBlock(bucketDetails BucketDetails, buc
 		Action:    "s3.GetObject",
 	}
 
-	if slices.Contains(policy.Statement, publicAccessPolicy) {
+	if slices.ContainsFunc(policy.Statement, func(statement bucketPolicyStatement) bool {
+		return statement.Effect == publicAccessPolicy.Effect &&
+			statement.Principal == publicAccessPolicy.Principal &&
+			statement.Action == publicAccessPolicy.Action
+	}) {
 		_, err := s.s3svc.DeletePublicAccessBlock(&s3.DeletePublicAccessBlockInput{
 			Bucket: aws.String(bucketName),
 		})
