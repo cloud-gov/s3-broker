@@ -155,6 +155,10 @@ func (s *S3Bucket) Create(bucketName string, bucketDetails BucketDetails) (strin
 // new S3 buckets by default as of April 2023.
 func (s *S3Bucket) checkDeletePublicAccessBlock(bucketDetails BucketDetails, bucketName string) error {
 	var policy bucketPolicy
+	// buckets with no policy are private by default.
+	if bucketDetails.Policy == "" {
+		return nil
+	}
 	err := json.Unmarshal([]byte(bucketDetails.Policy), &policy)
 	if err != nil {
 		s.logger.Error("aws-s3-error", err)
