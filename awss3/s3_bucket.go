@@ -21,10 +21,10 @@ type S3Bucket struct {
 }
 
 type bucketPolicyStatement struct {
-	Effect    string `json:"Effect"`
-	Principal string `json:"Principal"`
-	Action    string `json:"Action"`
-	Resource  string `json:"Resource"`
+	Effect    string   `json:"Effect"`
+	Principal string   `json:"Principal"`
+	Action    []string `json:"Action"`
+	Resource  string   `json:"Resource"`
 }
 
 type bucketPolicy struct {
@@ -169,13 +169,13 @@ func (s *S3Bucket) checkDeletePublicAccessBlock(bucketDetails BucketDetails, buc
 	publicAccessPolicy := bucketPolicyStatement{
 		Effect:    "Allow",
 		Principal: "*",
-		Action:    "s3.GetObject",
+		Action:    []string{"s3.GetObject"},
 	}
 
 	if slices.ContainsFunc(policy.Statement, func(statement bucketPolicyStatement) bool {
 		return statement.Effect == publicAccessPolicy.Effect &&
 			statement.Principal == publicAccessPolicy.Principal &&
-			statement.Action == publicAccessPolicy.Action
+			slices.Equal(statement.Action, publicAccessPolicy.Action)
 	}) {
 		_, err := s.s3svc.DeletePublicAccessBlock(&s3.DeletePublicAccessBlockInput{
 			Bucket: aws.String(bucketName),

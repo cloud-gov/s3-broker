@@ -4,13 +4,20 @@ This is a [Cloud Foundry Service Broker](https://docs.cloudfoundry.org/services/
 
 ## Installation
 
-### Locally
+### Local Development
 
-Using the standard `go install` (you must have [Go](https://golang.org/) already installed in your local machine):
+To run the latest version of the broker without cloning the repository, install using `go install` (you must have [Go](https://golang.org/) already installed in your local machine):
 
 ```
-$ go install github.com/cloudfoundry-community/s3-broker
+$ go install github.com/cloud-gov/s3-broker
 $ s3-broker -port=3000 -config=<path-to-your-config-file>
+```
+
+To develop the broker, clone the repository and run it with `go run`:
+
+```
+git clone git@github.com:cloud-gov/s3-broker.git && cd s3-broker
+go run . -port=3000 -config=<path-to-your-config-file>
 ```
 
 ### Cloud Foundry
@@ -18,7 +25,7 @@ $ s3-broker -port=3000 -config=<path-to-your-config-file>
 The broker can be deployed to an already existing [Cloud Foundry](https://www.cloudfoundry.org/) installation:
 
 ```
-$ git clone https://github.com/cloudfoundry-community/s3-broker.git
+$ git clone https://github.com/cloud-gov/s3-broker.git
 $ cd s3-broker
 ```
 
