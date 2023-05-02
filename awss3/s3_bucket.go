@@ -15,8 +15,18 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+type S3Client interface {
+	GetBucketLocation(input *s3.GetBucketLocationInput) (*s3.GetBucketLocationOutput, error)
+	CreateBucket(input *s3.CreateBucketInput) (*s3.CreateBucketOutput, error)
+	PutBucketTagging(input *s3.PutBucketTaggingInput) (*s3.PutBucketTaggingOutput, error)
+	PutBucketEncryption(input *s3.PutBucketEncryptionInput) (*s3.PutBucketEncryptionOutput, error)
+	PutBucketPolicy(input *s3.PutBucketPolicyInput) (*s3.PutBucketPolicyOutput, error)
+	DeletePublicAccessBlock(input *s3.DeletePublicAccessBlockInput) (*s3.DeletePublicAccessBlockOutput, error)
+	DeleteBucket(input *s3.DeleteBucketInput) (*s3.DeleteBucketOutput, error)
+}
+
 type S3Bucket struct {
-	s3svc  *s3.S3
+	s3svc  S3Client
 	logger lager.Logger
 }
 
@@ -24,7 +34,7 @@ type bucketPolicyStatement struct {
 	Effect    string   `json:"Effect"`
 	Principal string   `json:"Principal"`
 	Action    []string `json:"Action"`
-	Resource  string   `json:"Resource"`
+	Resource  []string `json:"Resource"`
 }
 
 type bucketPolicy struct {
@@ -33,7 +43,7 @@ type bucketPolicy struct {
 }
 
 func NewS3Bucket(
-	s3svc *s3.S3,
+	s3svc S3Client,
 	logger lager.Logger,
 ) *S3Bucket {
 	return &S3Bucket{
@@ -66,6 +76,8 @@ func (s *S3Bucket) Describe(bucketName, partition string) (BucketDetails, error)
 	return s.buildBucketDetails(bucketName, *region, partition, nil), nil
 }
 
+// Create attempts to create an S3 bucket. If successful, it returns the bucket's location
+// and a nil error. If not, it returns an empty string and an error.
 func (s *S3Bucket) Create(bucketName string, bucketDetails BucketDetails) (string, error) {
 	createBucketInput := s.buildCreateBucketInput(bucketName, bucketDetails)
 	s.logger.Debug("create-bucket", lager.Data{"input": createBucketInput})
@@ -155,6 +167,10 @@ func (s *S3Bucket) Create(bucketName string, bucketDetails BucketDetails) (strin
 // new S3 buckets by default as of April 2023.
 func (s *S3Bucket) checkDeletePublicAccessBlock(bucketDetails BucketDetails, bucketName string) error {
 	var policy bucketPolicy
+	// buckets with no policy are private by default.
+	if bucketDetails.Policy == "" {
+		return nil
+	}
 	err := json.Unmarshal([]byte(bucketDetails.Policy), &policy)
 	if err != nil {
 		s.logger.Error("aws-s3-error", err)
@@ -225,11 +241,11 @@ func (s *S3Bucket) Delete(bucketName string, deleteObjects bool) error {
 }
 
 func (s *S3Bucket) deleteBucketContents(bucketName string) error {
-	iter := s3manager.NewDeleteListIterator(s.s3svc, &s3.ListObjectsInput{
+	iter := s3manager.NewDeleteListIterator(s.s3svc.(*s3.S3), &s3.ListObjectsInput{
 		Bucket: aws.String(bucketName),
 	})
 
-	if err := s3manager.NewBatchDeleteWithClient(s.s3svc).Delete(aws.BackgroundContext(), iter); err != nil {
+	if err := s3manager.NewBatchDeleteWithClient(s.s3svc.(*s3.S3)).Delete(aws.BackgroundContext(), iter); err != nil {
 		s.logger.Error("aws-s3-error", err)
 		if awsErr, ok := err.(awserr.Error); ok {
 			return errors.New(awsErr.Code() + ": " + awsErr.Message())
