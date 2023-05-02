@@ -1,4 +1,4 @@
-module acceptance-tests
+module acceptance-test
 
 go 1.20
 
