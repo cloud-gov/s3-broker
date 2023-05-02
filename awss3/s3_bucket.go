@@ -150,7 +150,7 @@ func (s *S3Bucket) Create(bucketName string, bucketDetails BucketDetails) (strin
 		s.logger.Debug("put-bucket-policy", lager.Data{"input": putPolicyInput})
 		putPolicyOutput, err := s.s3svc.PutBucketPolicy(putPolicyInput)
 		if err != nil {
-			s.logger.Error("aws-s3-error", err)
+			s.logger.Error("aws-s3-error putting bucket policy", err)
 			if awsErr, ok := err.(awserr.Error); ok {
 				return "", errors.New(awsErr.Code() + ": " + awsErr.Message())
 			}
@@ -197,7 +197,7 @@ func (s *S3Bucket) checkDeletePublicAccessBlock(bucketDetails BucketDetails, buc
 			Bucket: aws.String(bucketName),
 		})
 		if err != nil {
-			s.logger.Error("aws-s3-error", err)
+			s.logger.Error("failed to delete public access block", err)
 			return err
 		}
 	}
