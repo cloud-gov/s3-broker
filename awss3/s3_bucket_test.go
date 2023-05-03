@@ -50,14 +50,7 @@ func (c *MockS3Client) DeleteBucket(input *s3.DeleteBucketInput) (*s3.DeleteBuck
 
 func (c *MockS3Client) GetPublicAccessBlock(input *s3.GetPublicAccessBlockInput) (*s3.GetPublicAccessBlockOutput, error) {
 	noPublicAccessBlockErr := awserr.New("NoSuchPublicAccessBlockConfiguration", "The public access block configuration was not found", errors.New("fail"))
-	return &s3.GetPublicAccessBlockOutput{
-		// PublicAccessBlockConfiguration: &s3.PublicAccessBlockConfiguration{
-		// 	BlockPublicAcls:       aws.Bool(false),
-		// 	IgnorePublicAcls:      aws.Bool(false),
-		// 	BlockPublicPolicy:     aws.Bool(false),
-		// 	RestrictPublicBuckets: aws.Bool(false),
-		// },
-	}, noPublicAccessBlockErr
+	return &s3.GetPublicAccessBlockOutput{}, noPublicAccessBlockErr
 }
 
 var publicPolicy = `{
