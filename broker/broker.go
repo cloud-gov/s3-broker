@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/lager"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/cloudfoundry-community/go-cfclient"
 	"github.com/pivotal-cf/brokerapi"
 
@@ -115,7 +116,12 @@ func (b *S3Broker) Provision(
 		acceptsIncompleteLogKey: asyncAllowed,
 	})
 
-	provisionParameters := ProvisionParameters{}
+	provisionParameters := ProvisionParameters{
+		// Default object ownership to "ObjectWriter" so that ACLs can be used.
+		// Preserves backwards compatibility after AWS changes:
+		//   https://aws.amazon.com/blogs/aws/heads-up-amazon-s3-security-changes-are-coming-in-april-of-2023/
+		ObjectOwnership: s3.ObjectOwnershipObjectWriter,
+	}
 	if b.allowUserProvisionParameters && len(details.RawParameters) > 0 {
 		if err := json.Unmarshal(details.RawParameters, &provisionParameters); err != nil {
 			return brokerapi.ProvisionedServiceSpec{}, err
@@ -437,6 +443,7 @@ func (b *S3Broker) createBucket(instanceID string, servicePlan ServicePlan, prov
 	bucketDetails.Policy = string(servicePlan.S3Properties.BucketPolicy)
 	bucketDetails.Encryption = string(servicePlan.S3Properties.Encryption)
 	bucketDetails.AwsPartition = b.awsPartition
+	bucketDetails.ObjectOwnership = provisionParameters.ObjectOwnership
 	return bucketDetails
 }
 

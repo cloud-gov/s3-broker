@@ -24,6 +24,7 @@ type S3Client interface {
 	PutBucketPolicy(input *s3.PutBucketPolicyInput) (*s3.PutBucketPolicyOutput, error)
 	DeletePublicAccessBlock(input *s3.DeletePublicAccessBlockInput) (*s3.DeletePublicAccessBlockOutput, error)
 	DeleteBucket(input *s3.DeleteBucketInput) (*s3.DeleteBucketOutput, error)
+	GetPublicAccessBlock(input *s3.GetPublicAccessBlockInput) (*s3.GetPublicAccessBlockOutput, error)
 }
 
 type S3Bucket struct {
@@ -203,11 +204,46 @@ func (s *S3Bucket) checkDeletePublicAccessBlock(bucketDetails BucketDetails, buc
 			s.logger.Error("failed to delete public access block", err)
 			return err
 		}
+
+		isDeleted, err := s.checkIsPublicAccessBlockDeleted(bucketName)
+		if err != nil {
+			s.logger.Error("failed to get public access block", err)
+			return err
+		}
+		retries := 0
+		maxRetries := 10
+		for !isDeleted && retries < maxRetries {
+			retries += 1
+
+			time.Sleep(1 * time.Second)
+
+			isDeleted, err = s.checkIsPublicAccessBlockDeleted(bucketName)
+
+			if err != nil {
+				s.logger.Error("failed to get public access block", err)
+				return err
+			}
+		}
+		if retries == maxRetries {
+			return fmt.Errorf("could not verify that public access block was deleted for bucket %s", bucketName)
+		}
 	}
-	// sleep to ensure that public access block is deleted before proceeding to put bucket polcy
-	// TODO: figure out if we can make an S3 API call instead of using a sleep statement
-	time.Sleep(1 * time.Second)
+
 	return nil
+}
+
+func (s *S3Bucket) checkIsPublicAccessBlockDeleted(bucketName string) (bool, error) {
+	getPublicAccessBlockInput := &s3.GetPublicAccessBlockInput{
+		Bucket: aws.String(bucketName),
+	}
+	_, err := s.s3svc.GetPublicAccessBlock(getPublicAccessBlockInput)
+	if awsErr, ok := err.(awserr.Error); ok {
+		if awsErr.Code() == "NoSuchPublicAccessBlockConfiguration" {
+			return true, nil
+		}
+		return false, err
+	}
+	return false, nil
 }
 
 func (s *S3Bucket) Modify(bucketName string, bucketDetails BucketDetails) error {
@@ -272,7 +308,8 @@ func (s3 *S3Bucket) buildBucketDetails(bucketName, region, partition string, att
 
 func (s *S3Bucket) buildCreateBucketInput(bucketName string, bucketDetails BucketDetails) *s3.CreateBucketInput {
 	createBucketInput := &s3.CreateBucketInput{
-		Bucket: aws.String(bucketName),
+		Bucket:          aws.String(bucketName),
+		ObjectOwnership: aws.String(bucketDetails.ObjectOwnership),
 	}
 	return createBucketInput
 }

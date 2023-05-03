@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"code.cloudfoundry.org/lager"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/s3"
 
 	"github.com/cloudfoundry-community/s3-broker/awss3"
@@ -45,6 +46,11 @@ func (c *MockS3Client) DeletePublicAccessBlock(input *s3.DeletePublicAccessBlock
 
 func (c *MockS3Client) DeleteBucket(input *s3.DeleteBucketInput) (*s3.DeleteBucketOutput, error) {
 	return nil, nil
+}
+
+func (c *MockS3Client) GetPublicAccessBlock(input *s3.GetPublicAccessBlockInput) (*s3.GetPublicAccessBlockOutput, error) {
+	noPublicAccessBlockErr := awserr.New("NoSuchPublicAccessBlockConfiguration", "The public access block configuration was not found", errors.New("fail"))
+	return &s3.GetPublicAccessBlockOutput{}, noPublicAccessBlockErr
 }
 
 var publicPolicy = `{
