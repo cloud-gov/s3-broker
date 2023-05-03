@@ -193,10 +193,11 @@ func (s *S3Bucket) checkDeletePublicAccessBlock(bucketDetails BucketDetails, buc
 			statement.Principal == publicAccessPolicy.Principal &&
 			slices.Equal(statement.Action, publicAccessPolicy.Action)
 	}) {
-		s.logger.Debug("delete-public-access-block")
-		_, err := s.s3svc.DeletePublicAccessBlock(&s3.DeletePublicAccessBlockInput{
+		deletePublicAccessBlockInput := &s3.DeletePublicAccessBlockInput{
 			Bucket: aws.String(bucketName),
-		})
+		}
+		s.logger.Debug("delete-public-access-block", lager.Data{"input": deletePublicAccessBlockInput})
+		_, err := s.s3svc.DeletePublicAccessBlock(deletePublicAccessBlockInput)
 		if err != nil {
 			s.logger.Error("failed to delete public access block", err)
 			return err
