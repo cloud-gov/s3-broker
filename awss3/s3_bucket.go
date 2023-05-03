@@ -205,15 +205,17 @@ func (s *S3Bucket) checkDeletePublicAccessBlock(bucketDetails BucketDetails, buc
 			return err
 		}
 
-		publicAccessConfig, err := s.getPublicAccessConfiguration(bucketName)
+		isDeleted, err := s.checkIsPublicAccessBlockDeleted(bucketName)
 		if err != nil {
 			s.logger.Error("failed to get public access block", err)
 			return err
 		}
-		for !checkIsPublicAccessEnabled(*publicAccessConfig) {
+		for !isDeleted {
 			// sleep to ensure that public access block is deleted before proceeding to put bucket polcy
 			time.Sleep(1 * time.Second)
-			publicAccessConfig, err = s.getPublicAccessConfiguration(bucketName)
+
+			isDeleted, err = s.checkIsPublicAccessBlockDeleted(bucketName)
+
 			if err != nil {
 				s.logger.Error("failed to get public access block", err)
 				return err
@@ -224,12 +226,18 @@ func (s *S3Bucket) checkDeletePublicAccessBlock(bucketDetails BucketDetails, buc
 	return nil
 }
 
-func (s *S3Bucket) getPublicAccessConfiguration(bucketName string) (*s3.PublicAccessBlockConfiguration, error) {
+func (s *S3Bucket) checkIsPublicAccessBlockDeleted(bucketName string) (bool, error) {
 	getPublicAccessBlockInput := &s3.GetPublicAccessBlockInput{
 		Bucket: aws.String(bucketName),
 	}
-	publicAccessInfo, err := s.s3svc.GetPublicAccessBlock(getPublicAccessBlockInput)
-	return publicAccessInfo.PublicAccessBlockConfiguration, err
+	_, err := s.s3svc.GetPublicAccessBlock(getPublicAccessBlockInput)
+	if awsErr, ok := err.(awserr.Error); ok {
+		if awsErr.Code() == "NoSuchPublicAccessBlockConfiguration" {
+			return true, nil
+		}
+		return false, err
+	}
+	return false, nil
 }
 
 func (s *S3Bucket) Modify(bucketName string, bucketDetails BucketDetails) error {
@@ -297,11 +305,4 @@ func (s *S3Bucket) buildCreateBucketInput(bucketName string, bucketDetails Bucke
 		Bucket: aws.String(bucketName),
 	}
 	return createBucketInput
-}
-
-func checkIsPublicAccessEnabled(publicAccessConfig s3.PublicAccessBlockConfiguration) bool {
-	return !*publicAccessConfig.BlockPublicAcls &&
-		!*publicAccessConfig.IgnorePublicAcls &&
-		!*publicAccessConfig.BlockPublicPolicy &&
-		!*publicAccessConfig.RestrictPublicBuckets
 }
