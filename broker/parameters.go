@@ -1,6 +1,7 @@
 package broker
 
 type ProvisionParameters struct {
+	ObjectOwnership string `json:"object_ownership"`
 }
 
 type BindParameters struct {
