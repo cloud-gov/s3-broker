@@ -9,7 +9,7 @@ cf target -o "${CF_ORGANIZATION}"
 
 cf target -s "${CF_SPACE}"
 
-pushd broker-src-dev/ci/acceptance
+pushd broker-src/ci/acceptance
   cf push ${APP_NAME} -m ${MEMORY_LIMIT:-"128M"} --no-start
 popd
 
