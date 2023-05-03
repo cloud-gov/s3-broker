@@ -12,6 +12,7 @@ import (
 )
 
 type MockS3Client struct {
+	deletePublicAccessBlockCalled bool
 }
 
 func (c *MockS3Client) GetBucketLocation(input *s3.GetBucketLocationInput) (*s3.GetBucketLocationOutput, error) {
@@ -38,6 +39,7 @@ func (c *MockS3Client) PutBucketPolicy(input *s3.PutBucketPolicyInput) (*s3.PutB
 }
 
 func (c *MockS3Client) DeletePublicAccessBlock(input *s3.DeletePublicAccessBlockInput) (*s3.DeletePublicAccessBlockOutput, error) {
+	c.deletePublicAccessBlockCalled = true
 	return &s3.DeletePublicAccessBlockOutput{}, nil
 }
 
@@ -59,11 +61,12 @@ var publicPolicy = `{
 
 func TestCreate(t *testing.T) {
 	cases := []struct {
-		Name          string
-		BucketName    string
-		BucketDetails awss3.BucketDetails
-		Location      string
-		Error         error
+		Name                                string
+		BucketName                          string
+		BucketDetails                       awss3.BucketDetails
+		Location                            string
+		Error                               error
+		expectDeletePublicAccessBlockCalled bool
 	}{
 		{
 			Name:       "basic bucket",
@@ -80,20 +83,25 @@ func TestCreate(t *testing.T) {
 			BucketDetails: awss3.BucketDetails{
 				Policy: publicPolicy,
 			},
-			Location: "/b",
-			Error:    nil,
+			Location:                            "/b",
+			Error:                               nil,
+			expectDeletePublicAccessBlockCalled: true,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
-			b := awss3.NewS3Bucket(&MockS3Client{}, lager.NewLogger("test"))
+			mocks3Client := &MockS3Client{}
+			b := awss3.NewS3Bucket(mocks3Client, lager.NewLogger("test"))
 			location, err := b.Create(tc.BucketName, tc.BucketDetails)
 			if location != tc.Location {
 				t.Errorf("expected location %v, got %v", tc.Location, location)
 			}
 			if !errors.Is(err, tc.Error) {
 				t.Errorf("expected return error %v, got %v", tc.Error, err)
+			}
+			if tc.expectDeletePublicAccessBlockCalled != mocks3Client.deletePublicAccessBlockCalled {
+				t.Errorf("expected public access called: %v, got: %v", tc.expectDeletePublicAccessBlockCalled, mocks3Client.deletePublicAccessBlockCalled)
 			}
 		})
 	}
