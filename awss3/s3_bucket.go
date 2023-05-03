@@ -212,7 +212,7 @@ func (s *S3Bucket) checkDeletePublicAccessBlock(bucketDetails BucketDetails, buc
 		}
 		retries := 0
 		maxRetries := 10
-		for !isDeleted && retries <= maxRetries {
+		for !isDeleted && retries < maxRetries {
 			retries += 1
 
 			time.Sleep(1 * time.Second)
