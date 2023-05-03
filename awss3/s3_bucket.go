@@ -205,6 +205,7 @@ func (s *S3Bucket) checkDeletePublicAccessBlock(bucketDetails BucketDetails, buc
 		}
 	}
 	// sleep to ensure that public access block is deleted before proceeding to put bucket polcy
+	// TODO: figure out if we can make an S3 API call instead of using a sleep statement
 	time.Sleep(1 * time.Second)
 	return nil
 }
