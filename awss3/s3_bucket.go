@@ -211,7 +211,8 @@ func (s *S3Bucket) checkDeletePublicAccessBlock(bucketDetails BucketDetails, buc
 			return err
 		}
 		retries := 0
-		for !isDeleted && retries <= 10 {
+		maxRetries := 10
+		for !isDeleted && retries <= maxRetries {
 			retries += 1
 
 			time.Sleep(1 * time.Second)
@@ -222,6 +223,9 @@ func (s *S3Bucket) checkDeletePublicAccessBlock(bucketDetails BucketDetails, buc
 				s.logger.Error("failed to get public access block", err)
 				return err
 			}
+		}
+		if retries == maxRetries {
+			return fmt.Errorf("could not verify that public access block was deleted for bucket %s", bucketName)
 		}
 	}
 
