@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"text/template"
+	"time"
 
 	"code.cloudfoundry.org/lager"
 	"github.com/aws/aws-sdk-go/aws"
@@ -150,7 +151,7 @@ func (s *S3Bucket) Create(bucketName string, bucketDetails BucketDetails) (strin
 		s.logger.Debug("put-bucket-policy", lager.Data{"input": putPolicyInput})
 		putPolicyOutput, err := s.s3svc.PutBucketPolicy(putPolicyInput)
 		if err != nil {
-			s.logger.Error("aws-s3-error", err)
+			s.logger.Error("aws-s3-error putting bucket policy", err)
 			if awsErr, ok := err.(awserr.Error); ok {
 				return "", errors.New(awsErr.Code() + ": " + awsErr.Message())
 			}
@@ -166,11 +167,12 @@ func (s *S3Bucket) Create(bucketName string, bucketDetails BucketDetails) (strin
 // is intended to be public. If so, it deletes the Public Access Block that is set on all
 // new S3 buckets by default as of April 2023.
 func (s *S3Bucket) checkDeletePublicAccessBlock(bucketDetails BucketDetails, bucketName string) error {
-	var policy bucketPolicy
 	// buckets with no policy are private by default.
 	if bucketDetails.Policy == "" {
 		return nil
 	}
+
+	var policy bucketPolicy
 	err := json.Unmarshal([]byte(bucketDetails.Policy), &policy)
 	if err != nil {
 		s.logger.Error("aws-s3-error", err)
@@ -185,22 +187,26 @@ func (s *S3Bucket) checkDeletePublicAccessBlock(bucketDetails BucketDetails, buc
 	publicAccessPolicy := bucketPolicyStatement{
 		Effect:    "Allow",
 		Principal: "*",
-		Action:    []string{"s3.GetObject"},
+		Action:    []string{"s3:GetObject"},
 	}
-
 	if slices.ContainsFunc(policy.Statement, func(statement bucketPolicyStatement) bool {
 		return statement.Effect == publicAccessPolicy.Effect &&
 			statement.Principal == publicAccessPolicy.Principal &&
 			slices.Equal(statement.Action, publicAccessPolicy.Action)
 	}) {
-		_, err := s.s3svc.DeletePublicAccessBlock(&s3.DeletePublicAccessBlockInput{
+		deletePublicAccessBlockInput := &s3.DeletePublicAccessBlockInput{
 			Bucket: aws.String(bucketName),
-		})
+		}
+		s.logger.Debug("delete-public-access-block", lager.Data{"input": deletePublicAccessBlockInput})
+		_, err := s.s3svc.DeletePublicAccessBlock(deletePublicAccessBlockInput)
 		if err != nil {
-			s.logger.Error("aws-s3-error", err)
+			s.logger.Error("failed to delete public access block", err)
 			return err
 		}
 	}
+	// sleep to ensure that public access block is deleted before proceeding to put bucket polcy
+	// TODO: figure out if we can make an S3 API call instead of using a sleep statement
+	time.Sleep(1 * time.Second)
 	return nil
 }
 
