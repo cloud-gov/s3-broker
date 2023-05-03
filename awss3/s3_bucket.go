@@ -24,6 +24,7 @@ type S3Client interface {
 	PutBucketPolicy(input *s3.PutBucketPolicyInput) (*s3.PutBucketPolicyOutput, error)
 	DeletePublicAccessBlock(input *s3.DeletePublicAccessBlockInput) (*s3.DeletePublicAccessBlockOutput, error)
 	DeleteBucket(input *s3.DeleteBucketInput) (*s3.DeleteBucketOutput, error)
+	GetPublicAccessBlock(input *s3.GetPublicAccessBlockInput) (*s3.GetPublicAccessBlockOutput, error)
 }
 
 type S3Bucket struct {
@@ -203,11 +204,35 @@ func (s *S3Bucket) checkDeletePublicAccessBlock(bucketDetails BucketDetails, buc
 			s.logger.Error("failed to delete public access block", err)
 			return err
 		}
+
+		publicAccessConfig, err := s.getPublicAccessConfiguration(bucketName)
+		if err != nil {
+			s.logger.Error("failed to get public access block", err)
+			return err
+		}
+		for !checkIsPublicAccessEnabled(*publicAccessConfig) {
+			// sleep to ensure that public access block is deleted before proceeding to put bucket polcy
+			time.Sleep(1 * time.Second)
+			publicAccessConfig, err = s.getPublicAccessConfiguration(bucketName)
+			if err != nil {
+				s.logger.Error("failed to get public access block", err)
+				return err
+			}
+		}
 	}
-	// sleep to ensure that public access block is deleted before proceeding to put bucket polcy
-	// TODO: figure out if we can make an S3 API call instead of using a sleep statement
-	time.Sleep(1 * time.Second)
+
 	return nil
+}
+
+func (s *S3Bucket) getPublicAccessConfiguration(bucketName string) (*s3.PublicAccessBlockConfiguration, error) {
+	getPublicAccessBlockInput := &s3.GetPublicAccessBlockInput{
+		Bucket: aws.String(bucketName),
+	}
+	publicAccessInfo, err := s.s3svc.GetPublicAccessBlock(getPublicAccessBlockInput)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	return publicAccessInfo.PublicAccessBlockConfiguration, err
 }
 
 func (s *S3Bucket) Modify(bucketName string, bucketDetails BucketDetails) error {
@@ -275,4 +300,11 @@ func (s *S3Bucket) buildCreateBucketInput(bucketName string, bucketDetails Bucke
 		Bucket: aws.String(bucketName),
 	}
 	return createBucketInput
+}
+
+func checkIsPublicAccessEnabled(publicAccessConfig s3.PublicAccessBlockConfiguration) bool {
+	return !*publicAccessConfig.BlockPublicAcls &&
+		!*publicAccessConfig.IgnorePublicAcls &&
+		!*publicAccessConfig.BlockPublicPolicy &&
+		!*publicAccessConfig.RestrictPublicBuckets
 }
