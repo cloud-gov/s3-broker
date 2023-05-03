@@ -210,8 +210,10 @@ func (s *S3Bucket) checkDeletePublicAccessBlock(bucketDetails BucketDetails, buc
 			s.logger.Error("failed to get public access block", err)
 			return err
 		}
-		for !isDeleted {
-			// sleep to ensure that public access block is deleted before proceeding to put bucket polcy
+		retries := 0
+		for !isDeleted && retries <= 10 {
+			retries += 1
+
 			time.Sleep(1 * time.Second)
 
 			isDeleted, err = s.checkIsPublicAccessBlockDeleted(bucketName)
