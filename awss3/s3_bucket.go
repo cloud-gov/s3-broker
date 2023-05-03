@@ -229,9 +229,6 @@ func (s *S3Bucket) getPublicAccessConfiguration(bucketName string) (*s3.PublicAc
 		Bucket: aws.String(bucketName),
 	}
 	publicAccessInfo, err := s.s3svc.GetPublicAccessBlock(getPublicAccessBlockInput)
-	// if err != nil {
-	// 	return nil, err
-	// }
 	return publicAccessInfo.PublicAccessBlockConfiguration, err
 }
 
