@@ -303,6 +303,10 @@ func (s3 *S3Bucket) buildBucketDetails(bucketName, region, partition string, att
 func (s *S3Bucket) buildCreateBucketInput(bucketName string, bucketDetails BucketDetails) *s3.CreateBucketInput {
 	createBucketInput := &s3.CreateBucketInput{
 		Bucket: aws.String(bucketName),
+		// Default object ownership to "ObjectWriter" so that ACLs can be used.
+		// Preserves backwards compatibility after AWS changes:
+		//   https://aws.amazon.com/blogs/aws/heads-up-amazon-s3-security-changes-are-coming-in-april-of-2023/
+		ObjectOwnership: aws.String(s3.ObjectOwnershipObjectWriter),
 	}
 	return createBucketInput
 }
