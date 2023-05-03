@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"text/template"
+	"time"
 
 	"code.cloudfoundry.org/lager"
 	"github.com/aws/aws-sdk-go/aws"
@@ -203,6 +204,8 @@ func (s *S3Bucket) checkDeletePublicAccessBlock(bucketDetails BucketDetails, buc
 			return err
 		}
 	}
+	// sleep to ensure that public access block is deleted before proceeding to put bucket polcy
+	time.Sleep(1 * time.Second)
 	return nil
 }
 
