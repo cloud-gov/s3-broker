@@ -183,7 +183,16 @@ func (s *S3Bucket) checkDeletePublicAccessBlock(bucketDetails BucketDetails, buc
 		return err
 	}
 
-	if isBucketPolicyPublic(policy.Statement) {
+	publicAccessPolicy := bucketPolicyStatement{
+		Effect:    "Allow",
+		Principal: "*",
+		Action:    []string{"s3:GetObject"},
+	}
+	if slices.ContainsFunc(policy.Statement, func(statement bucketPolicyStatement) bool {
+		return statement.Effect == publicAccessPolicy.Effect &&
+			statement.Principal == publicAccessPolicy.Principal &&
+			slices.Equal(statement.Action, publicAccessPolicy.Action)
+	}) {
 		s.logger.Debug("delete-public-access-block")
 		_, err := s.s3svc.DeletePublicAccessBlock(&s3.DeletePublicAccessBlockInput{
 			Bucket: aws.String(bucketName),
@@ -261,17 +270,4 @@ func (s *S3Bucket) buildCreateBucketInput(bucketName string, bucketDetails Bucke
 		Bucket: aws.String(bucketName),
 	}
 	return createBucketInput
-}
-
-func isBucketPolicyPublic(policyStatements []bucketPolicyStatement) bool {
-	publicAccessPolicy := bucketPolicyStatement{
-		Effect:    "Allow",
-		Principal: "*",
-		Action:    []string{"s3:GetObject"},
-	}
-	return slices.ContainsFunc(policyStatements, func(statement bucketPolicyStatement) bool {
-		return statement.Effect == publicAccessPolicy.Effect &&
-			statement.Principal == publicAccessPolicy.Principal &&
-			slices.Equal(statement.Action, publicAccessPolicy.Action)
-	})
 }
