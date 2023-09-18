@@ -55,7 +55,7 @@ s3_config:
 
 ## Samples
 
-To exercise the broker interface without writing code, you can use [Eden](https://starkandwayne.com/blog/welcome-to-eden-a-cli-for-every-open-service-broker-api/) which can be found [here](https://github.com/starkandwayne/eden).
+To exercise the broker interface without writing code, you can use [Eden](https://starkandwayne.com/blog/welcome-to-eden-a-cli-for-every-open-service-broker-api/) which can be found [here](https://github.com/Qarik-Group/eden).
 
 Setup with environment variables:
 ```
