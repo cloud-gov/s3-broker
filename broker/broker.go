@@ -439,7 +439,7 @@ func (b *S3Broker) policyName(bindingID string) string {
 
 func (b *S3Broker) createBucket(instanceID string, servicePlan ServicePlan, provisionParameters ProvisionParameters, details brokerapi.ProvisionDetails) *awss3.BucketDetails {
 	bucketDetails := b.bucketFromPlan(servicePlan)
-	bucketDetails.Tags = b.bucketTags("Created", details.ServiceID, details.PlanID, details.OrganizationGUID, details.SpaceGUID)
+	bucketDetails.Tags = b.bucketTags("Created", details.ServiceID, details.PlanID, details.OrganizationGUID, details.SpaceGUID, instanceID)
 	bucketDetails.Policy = string(servicePlan.S3Properties.BucketPolicy)
 	bucketDetails.Encryption = string(servicePlan.S3Properties.Encryption)
 	bucketDetails.AwsPartition = b.awsPartition
@@ -449,7 +449,7 @@ func (b *S3Broker) createBucket(instanceID string, servicePlan ServicePlan, prov
 
 func (b *S3Broker) modifyBucket(instanceID string, servicePlan ServicePlan, updateParameters UpdateParameters, details brokerapi.UpdateDetails) *awss3.BucketDetails {
 	bucketDetails := b.bucketFromPlan(servicePlan)
-	bucketDetails.Tags = b.bucketTags("Updated", details.ServiceID, details.PlanID, "", "")
+	bucketDetails.Tags = b.bucketTags("Updated", details.ServiceID, details.PlanID, "", "", instanceID)
 	return bucketDetails
 }
 
@@ -458,7 +458,14 @@ func (b *S3Broker) bucketFromPlan(servicePlan ServicePlan) *awss3.BucketDetails 
 	return bucketDetails
 }
 
-func (b *S3Broker) bucketTags(action, serviceID, planID, organizationID, spaceID string) map[string]string {
+func (b *S3Broker) bucketTags(
+	action,
+	serviceID string,
+	planID string,
+	organizationID string,
+	spaceID string,
+	instanceID string,
+) map[string]string {
 	tags := make(map[string]string)
 
 	tags["Owner"] = "Cloud Foundry"
@@ -468,19 +475,24 @@ func (b *S3Broker) bucketTags(action, serviceID, planID, organizationID, spaceID
 	tags[action+" at"] = time.Now().Format(time.RFC822Z)
 
 	if serviceID != "" {
-		tags["Service ID"] = serviceID
+		tags["Service GUID"] = serviceID
 	}
 
 	if planID != "" {
-		tags["Plan ID"] = planID
+		tags["Plan GUID"] = planID
 	}
 
 	if organizationID != "" {
-		tags["Organization ID"] = organizationID
+		tags["Organization GUID"] = organizationID
 	}
 
 	if spaceID != "" {
-		tags["Space ID"] = spaceID
+		tags["Space GUID"] = spaceID
 	}
+
+	if instanceID != "" {
+		tags["Instance GUID"] = instanceID
+	}
+
 	return tags
 }
