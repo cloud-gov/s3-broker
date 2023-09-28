@@ -439,7 +439,7 @@ func (b *S3Broker) policyName(bindingID string) string {
 
 func (b *S3Broker) createBucket(instanceID string, servicePlan ServicePlan, provisionParameters ProvisionParameters, details brokerapi.ProvisionDetails) *awss3.BucketDetails {
 	bucketDetails := b.bucketFromPlan(servicePlan)
-	bucketDetails.Tags = b.bucketTags("Created", details.ServiceID, details.PlanID, details.OrganizationGUID, details.SpaceGUID, instanceID)
+	bucketDetails.Tags = getBucketTags("Created", details.ServiceID, details.PlanID, details.OrganizationGUID, details.SpaceGUID, instanceID)
 	bucketDetails.Policy = string(servicePlan.S3Properties.BucketPolicy)
 	bucketDetails.Encryption = string(servicePlan.S3Properties.Encryption)
 	bucketDetails.AwsPartition = b.awsPartition
@@ -449,7 +449,7 @@ func (b *S3Broker) createBucket(instanceID string, servicePlan ServicePlan, prov
 
 func (b *S3Broker) modifyBucket(instanceID string, servicePlan ServicePlan, updateParameters UpdateParameters, details brokerapi.UpdateDetails) *awss3.BucketDetails {
 	bucketDetails := b.bucketFromPlan(servicePlan)
-	bucketDetails.Tags = b.bucketTags("Updated", details.ServiceID, details.PlanID, "", "", instanceID)
+	bucketDetails.Tags = getBucketTags("Updated", details.ServiceID, details.PlanID, "", "", instanceID)
 	return bucketDetails
 }
 
@@ -458,7 +458,7 @@ func (b *S3Broker) bucketFromPlan(servicePlan ServicePlan) *awss3.BucketDetails 
 	return bucketDetails
 }
 
-func (b *S3Broker) bucketTags(
+func getBucketTags(
 	action,
 	serviceID string,
 	planID string,

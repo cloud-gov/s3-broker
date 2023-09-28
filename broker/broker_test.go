@@ -1,10 +1,8 @@
-package broker_test
+package broker
 
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	. "github.com/cloudfoundry-community/s3-broker/broker"
 )
 
 var _ = Describe("Broker", func() {
@@ -35,6 +33,22 @@ var _ = Describe("Broker", func() {
 				SecretAccessKey: "secret-key!",
 			})
 			Expect(uri).To(Equal("s3://access-key%21:secret-key%21@s3-us-gov-west-1.amazonaws.com/bucket"))
+		})
+	})
+
+	Describe("getBucketTags", func() {
+		It("builds the correct bucket tags", func() {
+			tags := getBucketTags("Created", "abc1", "abc2", "abc3", "abc4", "abc5")
+			delete(tags, "Created at")
+			Expect(tags).To(Equal(map[string]string{
+				"Owner":             "Cloud Foundry",
+				"Created by":        "AWS S3 Service Broker",
+				"Service GUID":      "abc1",
+				"Plan GUID":         "abc2",
+				"Organization GUID": "abc3",
+				"Space GUID":        "abc4",
+				"Instance GUID":     "abc5",
+			}))
 		})
 	})
 })
