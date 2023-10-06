@@ -1,6 +1,7 @@
 package broker
 
 import (
+	"github.com/cloudfoundry-community/s3-broker/provider"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -11,11 +12,11 @@ var _ = Describe("Broker", func() {
 	)
 
 	Describe("GetBucketURI", func() {
-		BeforeEach(func() {
-			broker = S3Broker{}
-		})
-
 		It("builds the uri for a bucket in us-east-1", func() {
+			provider := provider.New("aws", "us-east-1", "")
+			broker = S3Broker{
+				provider: provider,
+			}
 			uri := broker.GetBucketURI(Credentials{
 				Bucket:          "bucket",
 				Region:          "us-east-1",
@@ -26,6 +27,10 @@ var _ = Describe("Broker", func() {
 		})
 
 		It("builds the uri for a bucket in not us-east-1", func() {
+			provider := provider.New("aws", "us-gov-west-1", "")
+			broker = S3Broker{
+				provider: provider,
+			}
 			uri := broker.GetBucketURI(Credentials{
 				Bucket:          "bucket",
 				Region:          "us-gov-west-1",

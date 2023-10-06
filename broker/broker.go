@@ -204,9 +204,13 @@ func (b *S3Broker) Deprovision(
 }
 
 func (b *S3Broker) GetBucketURI(credentials Credentials) string {
-	return fmt.Sprintf("s3://%s:%s@%s/%s",
-		url.QueryEscape(credentials.AccessKeyID), url.QueryEscape(credentials.SecretAccessKey),
-		b.provider.Endpoint(), credentials.Bucket)
+	return fmt.Sprintf(
+		"s3://%s:%s@%s/%s",
+		url.QueryEscape(credentials.AccessKeyID),
+		url.QueryEscape(credentials.SecretAccessKey),
+		b.provider.Endpoint(),
+		credentials.Bucket,
+	)
 }
 
 func (b *S3Broker) getBucketNames(instanceNames []string, instanceGUID string, planIDs []string) ([]string, error) {
