@@ -149,12 +149,14 @@ var _ = Describe("ServicePlan", func() {
 		servicePlan ServicePlan
 
 		validServicePlan = ServicePlan{
-			ID:           "Plan-1",
-			Name:         "Plan 1",
-			Description:  "Plan-1 description",
-			Metadata:     &brokerapi.ServicePlanMetadata{},
-			Free:         true,
-			S3Properties: S3Properties{},
+			ID:          "Plan-1",
+			Name:        "Plan 1",
+			Description: "Plan-1 description",
+			Metadata:    &brokerapi.ServicePlanMetadata{},
+			Free:        true,
+			S3Properties: S3Properties{
+				IamPolicy: "fake-iam-policy",
+			},
 		}
 	)
 

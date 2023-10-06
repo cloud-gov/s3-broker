@@ -16,6 +16,7 @@ var _ = Describe("Config", func() {
 			UserPrefix:   "cf",
 			PolicyPrefix: "cf",
 			BucketPrefix: "cf",
+			AwsPartition: "gov",
 			Catalog: Catalog{
 				[]Service{
 					Service{
