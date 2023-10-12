@@ -9,7 +9,7 @@ import (
 	"strings"
 	"text/template"
 
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 	awsarn "github.com/aws/aws-sdk-go/aws/arn"
 	madmin "github.com/minio/madmin-go"
 	iampolicy "github.com/minio/pkg/iam/policy"

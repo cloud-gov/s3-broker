@@ -1,4 +1,4 @@
-package awsiam_test
+package broker_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestAWSIAM(t *testing.T) {
+func TestBroker(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "AWS IAM Suite")
+	RunSpecs(t, "Broker Suite")
 }

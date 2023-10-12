@@ -9,10 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/cloudfoundry-community/go-cfclient"
-	"github.com/pivotal-cf/brokerapi"
+	"github.com/pivotal-cf/brokerapi/v10"
+	"github.com/pivotal-cf/brokerapi/v10/domain"
+	"github.com/pivotal-cf/brokerapi/v10/domain/apiresponses"
 
 	"github.com/cloudfoundry-community/s3-broker/awsiam"
 	"github.com/cloudfoundry-community/s3-broker/awss3"
@@ -107,9 +109,9 @@ func (b *S3Broker) Services(context context.Context) ([]brokerapi.Service, error
 func (b *S3Broker) Provision(
 	context context.Context,
 	instanceID string,
-	details brokerapi.ProvisionDetails,
+	details domain.ProvisionDetails,
 	asyncAllowed bool,
-) (brokerapi.ProvisionedServiceSpec, error) {
+) (domain.ProvisionedServiceSpec, error) {
 	b.logger.Debug("provision", lager.Data{
 		instanceIDLogKey:        instanceID,
 		detailsLogKey:           details,
@@ -124,30 +126,30 @@ func (b *S3Broker) Provision(
 	}
 	if b.allowUserProvisionParameters && len(details.RawParameters) > 0 {
 		if err := json.Unmarshal(details.RawParameters, &provisionParameters); err != nil {
-			return brokerapi.ProvisionedServiceSpec{}, err
+			return domain.ProvisionedServiceSpec{}, err
 		}
 	}
 
 	servicePlan, ok := b.catalog.FindServicePlan(details.PlanID)
 	if !ok {
-		return brokerapi.ProvisionedServiceSpec{}, fmt.Errorf("Service Plan '%s' not found", details.PlanID)
+		return domain.ProvisionedServiceSpec{}, fmt.Errorf("Service Plan '%s' not found", details.PlanID)
 	}
 
 	var err error
 	instance := b.createBucket(instanceID, servicePlan, provisionParameters, details)
 	if _, err = b.bucket.Create(b.bucketName(instanceID), *instance); err != nil {
-		return brokerapi.ProvisionedServiceSpec{}, err
+		return domain.ProvisionedServiceSpec{}, err
 	}
 
-	return brokerapi.ProvisionedServiceSpec{IsAsync: false}, nil
+	return domain.ProvisionedServiceSpec{IsAsync: false}, nil
 }
 
 func (b *S3Broker) Update(
 	context context.Context,
 	instanceID string,
-	details brokerapi.UpdateDetails,
+	details domain.UpdateDetails,
 	asyncAllowed bool,
-) (brokerapi.UpdateServiceSpec, error) {
+) (domain.UpdateServiceSpec, error) {
 	b.logger.Debug("update", lager.Data{
 		instanceIDLogKey:        instanceID,
 		detailsLogKey:           details,
@@ -157,32 +159,32 @@ func (b *S3Broker) Update(
 	updateParameters := UpdateParameters{}
 	if b.allowUserUpdateParameters && len(details.RawParameters) > 0 {
 		if err := json.Unmarshal(details.RawParameters, &updateParameters); err != nil {
-			return brokerapi.UpdateServiceSpec{}, err
+			return domain.UpdateServiceSpec{}, err
 		}
 	}
 
 	servicePlan, ok := b.catalog.FindServicePlan(details.PlanID)
 	if !ok {
-		return brokerapi.UpdateServiceSpec{}, fmt.Errorf("Service Plan '%s' not found", details.PlanID)
+		return domain.UpdateServiceSpec{}, fmt.Errorf("Service Plan '%s' not found", details.PlanID)
 	}
 
 	instance := b.modifyBucket(instanceID, servicePlan, updateParameters, details)
 	if err := b.bucket.Modify(b.bucketName(instanceID), *instance); err != nil {
 		if err == awss3.ErrBucketDoesNotExist {
-			return brokerapi.UpdateServiceSpec{}, brokerapi.ErrInstanceDoesNotExist
+			return domain.UpdateServiceSpec{}, apiresponses.ErrInstanceDoesNotExist
 		}
-		return brokerapi.UpdateServiceSpec{}, err
+		return domain.UpdateServiceSpec{}, err
 	}
 
-	return brokerapi.UpdateServiceSpec{IsAsync: false}, nil
+	return domain.UpdateServiceSpec{IsAsync: false}, nil
 }
 
 func (b *S3Broker) Deprovision(
 	context context.Context,
 	instanceID string,
-	details brokerapi.DeprovisionDetails,
+	details domain.DeprovisionDetails,
 	asyncAllowed bool,
-) (brokerapi.DeprovisionServiceSpec, error) {
+) (domain.DeprovisionServiceSpec, error) {
 	b.logger.Debug("deprovision", lager.Data{
 		instanceIDLogKey:        instanceID,
 		detailsLogKey:           details,
@@ -191,22 +193,26 @@ func (b *S3Broker) Deprovision(
 
 	servicePlan, ok := b.catalog.FindServicePlan(details.PlanID)
 	if !ok {
-		return brokerapi.DeprovisionServiceSpec{}, fmt.Errorf("Service Plan '%s' not found", details.PlanID)
+		return domain.DeprovisionServiceSpec{}, fmt.Errorf("Service Plan '%s' not found", details.PlanID)
 	}
 	if err := b.bucket.Delete(b.bucketName(instanceID), servicePlan.PlanDeletable); err != nil {
 		if err == awss3.ErrBucketDoesNotExist {
-			return brokerapi.DeprovisionServiceSpec{}, brokerapi.ErrInstanceDoesNotExist
+			return domain.DeprovisionServiceSpec{}, brokerapi.ErrInstanceDoesNotExist
 		}
-		return brokerapi.DeprovisionServiceSpec{}, err
+		return domain.DeprovisionServiceSpec{}, err
 	}
 
-	return brokerapi.DeprovisionServiceSpec{IsAsync: false}, nil
+	return domain.DeprovisionServiceSpec{IsAsync: false}, nil
 }
 
 func (b *S3Broker) GetBucketURI(credentials Credentials) string {
-	return fmt.Sprintf("s3://%s:%s@%s/%s",
-		url.QueryEscape(credentials.AccessKeyID), url.QueryEscape(credentials.SecretAccessKey),
-		b.provider.Endpoint(), credentials.Bucket)
+	return fmt.Sprintf(
+		"s3://%s:%s@%s/%s",
+		url.QueryEscape(credentials.AccessKeyID),
+		url.QueryEscape(credentials.SecretAccessKey),
+		b.provider.Endpoint(),
+		credentials.Bucket,
+	)
 }
 
 func (b *S3Broker) getBucketNames(instanceNames []string, instanceGUID string, planIDs []string) ([]string, error) {
@@ -256,15 +262,16 @@ func (b *S3Broker) getBucketNames(instanceNames []string, instanceGUID string, p
 func (b *S3Broker) Bind(
 	context context.Context,
 	instanceID, bindingID string,
-	details brokerapi.BindDetails,
-) (brokerapi.Binding, error) {
+	details domain.BindDetails,
+	asyncAllowed bool,
+) (domain.Binding, error) {
 	b.logger.Debug("bind", lager.Data{
 		instanceIDLogKey: instanceID,
 		bindingIDLogKey:  bindingID,
 		detailsLogKey:    details,
 	})
 
-	binding := brokerapi.Binding{}
+	binding := domain.Binding{}
 
 	var accessKeyID, secretAccessKey string
 	var policyARN string
@@ -306,7 +313,7 @@ func (b *S3Broker) Bind(
 			bucketDetails, err := b.bucket.Describe(bucketName, b.awsPartition)
 			if err != nil {
 				if err == awss3.ErrBucketDoesNotExist {
-					errc <- brokerapi.ErrInstanceDoesNotExist
+					errc <- apiresponses.ErrInstanceDoesNotExist
 				}
 				errc <- err
 			} else {
@@ -373,8 +380,9 @@ func (b *S3Broker) Bind(
 func (b *S3Broker) Unbind(
 	context context.Context,
 	instanceID, bindingID string,
-	details brokerapi.UnbindDetails,
-) error {
+	details domain.UnbindDetails,
+	asyncAllowed bool,
+) (domain.UnbindSpec, error) {
 	b.logger.Debug("unbind", lager.Data{
 		instanceIDLogKey: instanceID,
 		bindingIDLogKey:  bindingID,
@@ -383,46 +391,83 @@ func (b *S3Broker) Unbind(
 
 	accessKeys, err := b.user.ListAccessKeys(b.userName(bindingID))
 	if err != nil {
-		return err
+		return domain.UnbindSpec{}, err
 	}
 
 	for _, accessKey := range accessKeys {
 		if err := b.user.DeleteAccessKey(b.userName(bindingID), accessKey); err != nil {
-			return err
+			return domain.UnbindSpec{}, err
 		}
 	}
 
 	userPolicies, err := b.user.ListAttachedUserPolicies(b.userName(bindingID), b.iamPath)
 	if err != nil {
-		return err
+		return domain.UnbindSpec{}, err
 	}
 
 	for _, userPolicy := range userPolicies {
 		if err := b.user.DetachUserPolicy(b.userName(bindingID), userPolicy); err != nil {
-			return err
+			return domain.UnbindSpec{}, err
 		}
 
 		if err := b.user.DeletePolicy(userPolicy); err != nil {
-			return err
+			return domain.UnbindSpec{}, err
 		}
 	}
 
 	if err := b.user.Delete(b.userName(bindingID)); err != nil {
-		return err
+		return domain.UnbindSpec{}, err
 	}
 
-	return nil
+	return domain.UnbindSpec{
+		IsAsync: false,
+	}, nil
 }
 
 func (b *S3Broker) LastOperation(
-	context context.Context,
-	instanceID, operationData string,
-) (brokerapi.LastOperation, error) {
+	ctx context.Context,
+	instanceID string,
+	details domain.PollDetails,
+) (domain.LastOperation, error) {
 	b.logger.Debug("last-operation", lager.Data{
 		instanceIDLogKey: instanceID,
 	})
+	return domain.LastOperation{}, errors.New("this broker does not support LastOperation")
+}
 
-	return brokerapi.LastOperation{}, errors.New("This broker does not support LastOperation")
+func (b *S3Broker) GetBinding(
+	ctx context.Context,
+	instanceID,
+	bindingID string,
+	details domain.FetchBindingDetails,
+) (domain.GetBindingSpec, error) {
+	b.logger.Debug("get-binding", lager.Data{
+		instanceIDLogKey: instanceID,
+	})
+	return domain.GetBindingSpec{}, errors.New("this broker does not support GetBinding")
+}
+
+func (b *S3Broker) GetInstance(
+	ctx context.Context,
+	instanceID string,
+	details domain.FetchInstanceDetails,
+) (domain.GetInstanceDetailsSpec, error) {
+	b.logger.Debug("get-instance", lager.Data{
+		instanceIDLogKey: instanceID,
+	})
+	return domain.GetInstanceDetailsSpec{}, errors.New("this broker does not support GetInstance")
+}
+
+func (b *S3Broker) LastBindingOperation(
+	ctx context.Context,
+	instanceID,
+	bindingID string,
+	details domain.PollDetails,
+) (domain.LastOperation, error) {
+	b.logger.Debug("last-binding-operation", lager.Data{
+		instanceIDLogKey: instanceID,
+	})
+	return domain.LastOperation{}, errors.New("this broker does not support LastBindingOperation")
 }
 
 func (b *S3Broker) bucketName(instanceID string) string {
@@ -439,7 +484,7 @@ func (b *S3Broker) policyName(bindingID string) string {
 
 func (b *S3Broker) createBucket(instanceID string, servicePlan ServicePlan, provisionParameters ProvisionParameters, details brokerapi.ProvisionDetails) *awss3.BucketDetails {
 	bucketDetails := b.bucketFromPlan(servicePlan)
-	bucketDetails.Tags = b.bucketTags("Created", details.ServiceID, details.PlanID, details.OrganizationGUID, details.SpaceGUID)
+	bucketDetails.Tags = getBucketTags("Created", details.ServiceID, details.PlanID, details.OrganizationGUID, details.SpaceGUID, instanceID)
 	bucketDetails.Policy = string(servicePlan.S3Properties.BucketPolicy)
 	bucketDetails.Encryption = string(servicePlan.S3Properties.Encryption)
 	bucketDetails.AwsPartition = b.awsPartition
@@ -449,7 +494,7 @@ func (b *S3Broker) createBucket(instanceID string, servicePlan ServicePlan, prov
 
 func (b *S3Broker) modifyBucket(instanceID string, servicePlan ServicePlan, updateParameters UpdateParameters, details brokerapi.UpdateDetails) *awss3.BucketDetails {
 	bucketDetails := b.bucketFromPlan(servicePlan)
-	bucketDetails.Tags = b.bucketTags("Updated", details.ServiceID, details.PlanID, "", "")
+	bucketDetails.Tags = getBucketTags("Updated", details.ServiceID, details.PlanID, "", "", instanceID)
 	return bucketDetails
 }
 
@@ -458,7 +503,14 @@ func (b *S3Broker) bucketFromPlan(servicePlan ServicePlan) *awss3.BucketDetails 
 	return bucketDetails
 }
 
-func (b *S3Broker) bucketTags(action, serviceID, planID, organizationID, spaceID string) map[string]string {
+func getBucketTags(
+	action,
+	serviceID string,
+	planID string,
+	organizationID string,
+	spaceID string,
+	instanceID string,
+) map[string]string {
 	tags := make(map[string]string)
 
 	tags["Owner"] = "Cloud Foundry"
@@ -468,19 +520,24 @@ func (b *S3Broker) bucketTags(action, serviceID, planID, organizationID, spaceID
 	tags[action+" at"] = time.Now().Format(time.RFC822Z)
 
 	if serviceID != "" {
-		tags["Service ID"] = serviceID
+		tags["Service GUID"] = serviceID
 	}
 
 	if planID != "" {
-		tags["Plan ID"] = planID
+		tags["Plan GUID"] = planID
 	}
 
 	if organizationID != "" {
-		tags["Organization ID"] = organizationID
+		tags["Organization GUID"] = organizationID
 	}
 
 	if spaceID != "" {
-		tags["Space ID"] = spaceID
+		tags["Space GUID"] = spaceID
 	}
+
+	if instanceID != "" {
+		tags["Instance GUID"] = instanceID
+	}
+
 	return tags
 }

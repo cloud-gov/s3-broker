@@ -1,11 +1,11 @@
 package broker_test
 
 import (
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	. "github.com/cloudfoundry-community/s3-broker/broker"
-	"github.com/pivotal-cf/brokerapi"
+	"github.com/pivotal-cf/brokerapi/v10"
 )
 
 var _ = Describe("Catalog", func() {
@@ -149,12 +149,14 @@ var _ = Describe("ServicePlan", func() {
 		servicePlan ServicePlan
 
 		validServicePlan = ServicePlan{
-			ID:           "Plan-1",
-			Name:         "Plan 1",
-			Description:  "Plan-1 description",
-			Metadata:     &brokerapi.ServicePlanMetadata{},
-			Free:         true,
-			S3Properties: S3Properties{},
+			ID:          "Plan-1",
+			Name:        "Plan 1",
+			Description: "Plan-1 description",
+			Metadata:    &brokerapi.ServicePlanMetadata{},
+			Free:        true,
+			S3Properties: S3Properties{
+				IamPolicy: "fake-iam-policy",
+			},
 		}
 	)
 

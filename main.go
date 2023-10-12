@@ -9,12 +9,12 @@ import (
 	"os"
 	"strings"
 
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/cloudfoundry-community/go-cfclient"
-	"github.com/pivotal-cf/brokerapi"
+	"github.com/pivotal-cf/brokerapi/v10"
 
 	"github.com/cloudfoundry-community/s3-broker/awsiam"
 	"github.com/cloudfoundry-community/s3-broker/awss3"

@@ -1,7 +1,7 @@
 package broker_test
 
 import (
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	. "github.com/cloudfoundry-community/s3-broker/broker"
@@ -16,6 +16,7 @@ var _ = Describe("Config", func() {
 			UserPrefix:   "cf",
 			PolicyPrefix: "cf",
 			BucketPrefix: "cf",
+			AwsPartition: "gov",
 			Catalog: Catalog{
 				[]Service{
 					Service{
