@@ -8,9 +8,9 @@ require (
 	github.com/cloudfoundry-community/go-cfclient v0.0.0-20180308150602-a2edd96f81ac
 	github.com/minio/madmin-go v1.6.6
 	github.com/minio/pkg v1.7.0
-	github.com/onsi/ginkgo/v2 v2.12.1
-	github.com/onsi/gomega v1.27.10
-	github.com/pivotal-cf/brokerapi v6.4.2+incompatible
+	github.com/onsi/ginkgo/v2 v2.13.0
+	github.com/onsi/gomega v1.28.0
+	github.com/pivotal-cf/brokerapi/v10 v10.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-password v0.2.0
 	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53
@@ -19,11 +19,10 @@ require (
 
 require (
 	code.cloudfoundry.org/gofileutils v0.0.0-20170111115228-4d0c80011a0f // indirect
-	code.cloudfoundry.org/lager v2.0.0+incompatible // indirect
 	github.com/cloudfoundry/gofileutils v0.0.0-20170111115228-4d0c80011a0f // indirect
 	github.com/codegangsta/inject v0.0.0-20150114235600-33e0aa1cb7c0 // indirect
-	github.com/drewolson/testflight v1.0.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
+	github.com/go-chi/chi/v5 v5.0.10 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-martini/martini v0.0.0-20170121215854-22fa46961aab // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
@@ -32,7 +31,6 @@ require (
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/pprof v0.0.0-20210407192527-94a9f03dee38 // indirect
 	github.com/google/uuid v1.3.1 // indirect
-	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
@@ -65,7 +63,7 @@ require (
 	golang.org/x/sync v0.3.0 // indirect
 	golang.org/x/sys v0.12.0 // indirect
 	golang.org/x/text v0.12.0 // indirect
-	golang.org/x/tools v0.12.0 // indirect
+	golang.org/x/tools v0.12.1-0.20230825192346-2191a27a6dc5 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
