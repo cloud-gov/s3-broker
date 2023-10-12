@@ -12,9 +12,9 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/cloudfoundry-community/go-cfclient"
-	"github.com/pivotal-cf/brokerapi"
-	"github.com/pivotal-cf/brokerapi/domain"
-	"github.com/pivotal-cf/brokerapi/domain/apiresponses"
+	"github.com/pivotal-cf/brokerapi/v10"
+	"github.com/pivotal-cf/brokerapi/v10/domain"
+	"github.com/pivotal-cf/brokerapi/v10/domain/apiresponses"
 
 	"github.com/cloudfoundry-community/s3-broker/awsiam"
 	"github.com/cloudfoundry-community/s3-broker/awss3"
@@ -435,14 +435,23 @@ func (b *S3Broker) LastOperation(
 	return domain.LastOperation{}, errors.New("this broker does not support LastOperation")
 }
 
-func (b *S3Broker) GetBinding(ctx context.Context, instanceID, bindingID string) (domain.GetBindingSpec, error) {
+func (b *S3Broker) GetBinding(
+	ctx context.Context,
+	instanceID,
+	bindingID string,
+	details domain.FetchBindingDetails,
+) (domain.GetBindingSpec, error) {
 	b.logger.Debug("get-binding", lager.Data{
 		instanceIDLogKey: instanceID,
 	})
 	return domain.GetBindingSpec{}, errors.New("this broker does not support GetBinding")
 }
 
-func (b *S3Broker) GetInstance(ctx context.Context, instanceID string) (domain.GetInstanceDetailsSpec, error) {
+func (b *S3Broker) GetInstance(
+	ctx context.Context,
+	instanceID string,
+	details domain.FetchInstanceDetails,
+) (domain.GetInstanceDetailsSpec, error) {
 	b.logger.Debug("get-instance", lager.Data{
 		instanceIDLogKey: instanceID,
 	})
