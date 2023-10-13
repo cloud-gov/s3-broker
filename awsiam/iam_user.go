@@ -131,7 +131,6 @@ func (i *IAMUser) CreateAccessKey(userName string) (string, string, error) {
 		}
 		return "", "", err
 	}
-	i.logger.Debug("create-access-key", lager.Data{"output": createAccessKeyOutput})
 
 	return aws.StringValue(createAccessKeyOutput.AccessKey.AccessKeyId), aws.StringValue(createAccessKeyOutput.AccessKey.SecretAccessKey), nil
 }
