@@ -5,6 +5,7 @@ go 1.20
 require (
 	code.cloudfoundry.org/lager/v3 v3.0.2
 	github.com/aws/aws-sdk-go v1.44.251
+	github.com/cloud-gov/go-broker-tags v0.0.0-20240111203941-6b899af79415
 	github.com/cloudfoundry-community/go-cfclient v0.0.0-20180308150602-a2edd96f81ac
 	github.com/minio/madmin-go v1.6.6
 	github.com/minio/pkg v1.7.0
@@ -19,7 +20,6 @@ require (
 
 require (
 	code.cloudfoundry.org/gofileutils v0.0.0-20170111115228-4d0c80011a0f // indirect
-	github.com/cloud-gov/go-broker-tags v0.0.0-20240110222823-ade415005c99 // indirect
 	github.com/cloudfoundry-community/go-cfclient/v3 v3.0.0-alpha.6 // indirect
 	github.com/cloudfoundry/gofileutils v0.0.0-20170111115228-4d0c80011a0f // indirect
 	github.com/codegangsta/inject v0.0.0-20150114235600-33e0aa1cb7c0 // indirect
