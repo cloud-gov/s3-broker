@@ -266,7 +266,8 @@ func (b *S3Broker) getBucketNames(instanceNames []string, instanceGUID string, p
 
 func (b *S3Broker) Bind(
 	context context.Context,
-	instanceID, bindingID string,
+	instanceID string,
+	bindingID string,
 	details domain.BindDetails,
 	asyncAllowed bool,
 ) (domain.Binding, error) {
@@ -282,17 +283,32 @@ func (b *S3Broker) Bind(
 	var policyARN string
 	var err error
 
-	servicePlan, ok := b.catalog.FindServicePlan(details.PlanID)
-	if !ok {
-		return binding, fmt.Errorf("Service Plan '%s' not found", details.PlanID)
-	}
-
 	bindParameters := BindParameters{}
 	if len(details.RawParameters) > 0 {
 		if err := json.Unmarshal(details.RawParameters, &bindParameters); err != nil {
 			return binding, err
 		}
 	}
+
+	servicePlan, ok := b.catalog.FindServicePlan(details.PlanID)
+	if !ok {
+		return binding, fmt.Errorf("Service Plan '%s' not found", details.PlanID)
+	}
+
+	service, ok := b.catalog.FindService(details.ServiceID)
+	if !ok {
+		return binding, fmt.Errorf("Service '%s' not found", details.ServiceID)
+	}
+
+	tags, err := b.tagManager.GenerateTags(
+		brokertags.Create,
+		service.Name,
+		servicePlan.Name,
+		instanceID,
+		"",
+		"",
+	)
+	iamTags := awsiam.ConvertTagsMapToIAMTags(tags)
 
 	bucketNames := []string{b.bucketName(instanceID)}
 	if len(bindParameters.AdditionalInstances) > 0 {
@@ -344,7 +360,7 @@ func (b *S3Broker) Bind(
 		}
 	}
 
-	if _, err = b.user.Create(b.userName(bindingID), b.iamPath); err != nil {
+	if _, err = b.user.Create(b.userName(bindingID), b.iamPath, iamTags); err != nil {
 		return binding, err
 	}
 	defer func() {
@@ -364,7 +380,13 @@ func (b *S3Broker) Bind(
 		return binding, err
 	}
 
-	policyARN, err = b.user.CreatePolicy(b.policyName(bindingID), b.iamPath, string(servicePlan.S3Properties.IamPolicy), bucketARNs)
+	policyARN, err = b.user.CreatePolicy(
+		b.policyName(bindingID),
+		b.iamPath,
+		string(servicePlan.S3Properties.IamPolicy),
+		bucketARNs,
+		iamTags,
+	)
 	if err != nil {
 		return binding, err
 	}

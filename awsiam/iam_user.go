@@ -53,10 +53,15 @@ func (i *IAMUser) Describe(userName string) (UserDetails, error) {
 	return userDetails, nil
 }
 
-func (i *IAMUser) Create(userName, iamPath string) (string, error) {
+func (i *IAMUser) Create(
+	userName,
+	iamPath string,
+	iamTags []*iam.Tag,
+) (string, error) {
 	createUserInput := &iam.CreateUserInput{
 		UserName: aws.String(userName),
 		Path:     stringOrNil(iamPath),
+		Tags:     iamTags,
 	}
 	i.logger.Debug("create-user", lager.Data{"input": createUserInput})
 
@@ -155,7 +160,13 @@ func (i *IAMUser) DeleteAccessKey(userName, accessKeyID string) error {
 	return nil
 }
 
-func (i *IAMUser) CreatePolicy(policyName, iamPath, policyTemplate string, resources []string) (string, error) {
+func (i *IAMUser) CreatePolicy(
+	policyName,
+	iamPath,
+	policyTemplate string,
+	resources []string,
+	iamTags []*iam.Tag,
+) (string, error) {
 	tmpl, err := template.New("policy").Funcs(template.FuncMap{
 		"resources": func(suffix string) string {
 			resourcePaths := make([]string, len(resources))
@@ -184,6 +195,7 @@ func (i *IAMUser) CreatePolicy(policyName, iamPath, policyTemplate string, resou
 		PolicyName:     aws.String(policyName),
 		PolicyDocument: aws.String(policy.String()),
 		Path:           stringOrNil(iamPath),
+		Tags:           iamTags,
 	}
 	i.logger.Debug("create-policy", lager.Data{"input": createPolicyInput})
 
