@@ -19,6 +19,8 @@ import (
 	"github.com/cloudfoundry-community/s3-broker/awsiam"
 	"github.com/cloudfoundry-community/s3-broker/awss3"
 	"github.com/cloudfoundry-community/s3-broker/provider"
+
+	brokertags "github.com/cloud-gov/go-broker-tags"
 )
 
 const instanceIDLogKey = "instance-id"
@@ -46,6 +48,7 @@ type S3Broker struct {
 	user                         awsiam.User
 	cfClient                     *cfclient.Client
 	logger                       lager.Logger
+	tagManager                   brokertags.TagManager
 }
 
 type CatalogExternal struct {
@@ -71,6 +74,7 @@ func New(
 	user awsiam.User,
 	cfClient *cfclient.Client,
 	logger lager.Logger,
+	tagManager brokertags.TagManager,
 ) *S3Broker {
 	return &S3Broker{
 		provider:                     provider,
@@ -135,8 +139,10 @@ func (b *S3Broker) Provision(
 		return domain.ProvisionedServiceSpec{}, fmt.Errorf("Service Plan '%s' not found", details.PlanID)
 	}
 
-	var err error
-	instance := b.createBucket(instanceID, servicePlan, provisionParameters, details)
+	instance, err := b.createBucket(instanceID, servicePlan, provisionParameters, details)
+	if err != nil {
+		return domain.ProvisionedServiceSpec{}, err
+	}
 	if _, err = b.bucket.Create(b.bucketName(instanceID), *instance); err != nil {
 		return domain.ProvisionedServiceSpec{}, err
 	}
@@ -482,14 +488,38 @@ func (b *S3Broker) policyName(bindingID string) string {
 	return fmt.Sprintf("%s-%s", b.policyPrefix, bindingID)
 }
 
-func (b *S3Broker) createBucket(instanceID string, servicePlan ServicePlan, provisionParameters ProvisionParameters, details brokerapi.ProvisionDetails) *awss3.BucketDetails {
+func (b *S3Broker) createBucket(
+	instanceID string,
+	servicePlan ServicePlan,
+	provisionParameters ProvisionParameters,
+	details brokerapi.ProvisionDetails,
+) (*awss3.BucketDetails, error) {
 	bucketDetails := b.bucketFromPlan(servicePlan)
-	bucketDetails.Tags = getBucketTags("Created", details.ServiceID, details.PlanID, details.OrganizationGUID, details.SpaceGUID, instanceID)
+
+	service, ok := b.catalog.FindService(details.ServiceID)
+	if !ok {
+		return nil, fmt.Errorf("Service '%s' not found", details.ServiceID)
+	}
+
+	// bucketDetails.Tags = getBucketTags("Created", details.ServiceID, details.PlanID, details.OrganizationGUID, details.SpaceGUID, instanceID)
+	tags, err := b.tagManager.GenerateTags(
+		brokertags.Create,
+		service.Name,
+		servicePlan.Name,
+		details.OrganizationGUID,
+		details.SpaceGUID,
+		instanceID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	bucketDetails.Tags = tags
+
 	bucketDetails.Policy = string(servicePlan.S3Properties.BucketPolicy)
 	bucketDetails.Encryption = string(servicePlan.S3Properties.Encryption)
 	bucketDetails.AwsPartition = b.awsPartition
 	bucketDetails.ObjectOwnership = provisionParameters.ObjectOwnership
-	return bucketDetails
+	return bucketDetails, nil
 }
 
 func (b *S3Broker) modifyBucket(instanceID string, servicePlan ServicePlan, updateParameters UpdateParameters, details brokerapi.UpdateDetails) *awss3.BucketDetails {

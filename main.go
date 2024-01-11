@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	brokertags "github.com/cloud-gov/go-broker-tags"
 	"github.com/cloudfoundry-community/go-cfclient"
 	"github.com/pivotal-cf/brokerapi/v10"
 
@@ -103,7 +104,26 @@ func main() {
 
 	provider := provider.New(config.S3Config.Provider, config.S3Config.Region, config.S3Config.Endpoint)
 
-	serviceBroker := broker.New(config.S3Config, provider, s3bucket, user, client, logger)
+	tagManager, err := brokertags.NewCFTagManager(
+		"S3 broker",
+		config.Environment,
+		config.CFConfig.ApiAddress,
+		config.CFConfig.ClientID,
+		config.CFConfig.ClientSecret,
+	)
+	if err != nil {
+		log.Fatalf("Failure to configure tag manager: %s", err)
+	}
+
+	serviceBroker := broker.New(
+		config.S3Config,
+		provider,
+		s3bucket,
+		user,
+		client,
+		logger,
+		tagManager,
+	)
 
 	credentials := brokerapi.BrokerCredentials{
 		Username: config.Username,

@@ -11,11 +11,12 @@ import (
 )
 
 type Config struct {
-	LogLevel string        `yaml:"log_level"`
-	Username string        `yaml:"username"`
-	Password string        `yaml:"password"`
-	S3Config broker.Config `yaml:"s3_config"`
-	CFConfig *CFConfig     `yaml:"cf_config"`
+	LogLevel    string        `yaml:"log_level"`
+	Username    string        `yaml:"username"`
+	Password    string        `yaml:"password"`
+	Environment string        `yaml:"environment"`
+	S3Config    broker.Config `yaml:"s3_config"`
+	CFConfig    *CFConfig     `yaml:"cf_config"`
 }
 
 type CFConfig struct {
