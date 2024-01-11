@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
-	"time"
 
 	"code.cloudfoundry.org/lager/v3"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -501,7 +500,6 @@ func (b *S3Broker) createBucket(
 		return nil, fmt.Errorf("Service '%s' not found", details.ServiceID)
 	}
 
-	// bucketDetails.Tags = getBucketTags("Created", details.ServiceID, details.PlanID, details.OrganizationGUID, details.SpaceGUID, instanceID)
 	tags, err := b.tagManager.GenerateTags(
 		brokertags.Create,
 		service.Name,
@@ -524,50 +522,10 @@ func (b *S3Broker) createBucket(
 
 func (b *S3Broker) modifyBucket(instanceID string, servicePlan ServicePlan, updateParameters UpdateParameters, details brokerapi.UpdateDetails) *awss3.BucketDetails {
 	bucketDetails := b.bucketFromPlan(servicePlan)
-	bucketDetails.Tags = getBucketTags("Updated", details.ServiceID, details.PlanID, "", "", instanceID)
 	return bucketDetails
 }
 
 func (b *S3Broker) bucketFromPlan(servicePlan ServicePlan) *awss3.BucketDetails {
 	bucketDetails := &awss3.BucketDetails{}
 	return bucketDetails
-}
-
-func getBucketTags(
-	action,
-	serviceID string,
-	planID string,
-	organizationID string,
-	spaceID string,
-	instanceID string,
-) map[string]string {
-	tags := make(map[string]string)
-
-	tags["Owner"] = "Cloud Foundry"
-
-	tags[action+" by"] = "AWS S3 Service Broker"
-
-	tags[action+" at"] = time.Now().Format(time.RFC822Z)
-
-	if serviceID != "" {
-		tags["Service GUID"] = serviceID
-	}
-
-	if planID != "" {
-		tags["Plan GUID"] = planID
-	}
-
-	if organizationID != "" {
-		tags["Organization GUID"] = organizationID
-	}
-
-	if spaceID != "" {
-		tags["Space GUID"] = spaceID
-	}
-
-	if instanceID != "" {
-		tags["Instance GUID"] = instanceID
-	}
-
-	return tags
 }
