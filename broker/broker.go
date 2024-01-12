@@ -90,6 +90,7 @@ func New(
 		user:                         user,
 		cfClient:                     cfClient,
 		logger:                       logger.Session("broker"),
+		tagManager:                   tagManager,
 	}
 }
 
