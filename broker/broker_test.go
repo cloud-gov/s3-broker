@@ -18,9 +18,8 @@ func (mt *mockTagGenerator) GenerateTags(
 	action brokertags.Action,
 	serviceGUID string,
 	servicePlanGUID string,
-	organizationGUID string,
-	spaceGUID string,
-	instanceGUID string,
+	resourceGUIDs brokertags.ResourceGUIDs,
+	getMissingResources bool,
 ) (map[string]string, error) {
 	return mt.tags, nil
 }
