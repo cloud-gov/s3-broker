@@ -6,18 +6,18 @@ import (
 )
 
 type Config struct {
-	Region                       string  `yaml:"region"`
-	Endpoint                     string  `yaml:"endpoint"`
-	InsecureSkipVerify           bool    `yaml:"insecure_skip_verify"`
-	Provider                     string  `yaml:"provider"`
-	IamPath                      string  `yaml:"iam_path"`
-	UserPrefix                   string  `yaml:"user_prefix"`
-	PolicyPrefix                 string  `yaml:"policy_prefix"`
-	BucketPrefix                 string  `yaml:"bucket_prefix"`
-	AwsPartition                 string  `yaml:"aws_partition"`
-	AllowUserProvisionParameters bool    `yaml:"allow_user_provision_parameters"`
-	AllowUserUpdateParameters    bool    `yaml:"allow_user_update_parameters"`
-	Catalog                      Catalog `yaml:"catalog"`
+	Region                       string        `yaml:"region"`
+	Endpoint                     string        `yaml:"endpoint"`
+	InsecureSkipVerify           bool          `yaml:"insecure_skip_verify"`
+	Provider                     string        `yaml:"provider"`
+	IamPath                      string        `yaml:"iam_path"`
+	UserPrefix                   string        `yaml:"user_prefix"`
+	PolicyPrefix                 string        `yaml:"policy_prefix"`
+	BucketPrefix                 string        `yaml:"bucket_prefix"`
+	AwsPartition                 string        `yaml:"aws_partition"`
+	AllowUserProvisionParameters bool          `yaml:"allow_user_provision_parameters"`
+	AllowUserUpdateParameters    bool          `yaml:"allow_user_update_parameters"`
+	Catalog                      BrokerCatalog `yaml:"catalog"`
 }
 
 func (c Config) Validate() error {
