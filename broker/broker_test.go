@@ -16,8 +16,8 @@ type mockTagGenerator struct {
 
 func (mt *mockTagGenerator) GenerateTags(
 	action brokertags.Action,
-	serviceGUID string,
-	servicePlanGUID string,
+	serviceName string,
+	servicePlanName string,
 	resourceGUIDs brokertags.ResourceGUIDs,
 	getMissingResources bool,
 ) (map[string]string, error) {

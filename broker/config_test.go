@@ -17,7 +17,7 @@ var _ = Describe("Config", func() {
 			PolicyPrefix: "cf",
 			BucketPrefix: "cf",
 			AwsPartition: "gov",
-			Catalog: Catalog{
+			Catalog: BrokerCatalog{
 				[]Service{
 					Service{
 						ID:          "service-1",
@@ -72,7 +72,7 @@ var _ = Describe("Config", func() {
 		})
 
 		It("returns error if Catalog is not valid", func() {
-			config.Catalog = Catalog{
+			config.Catalog = BrokerCatalog{
 				[]Service{
 					Service{},
 				},

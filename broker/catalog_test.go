@@ -10,7 +10,7 @@ import (
 
 var _ = Describe("Catalog", func() {
 	var (
-		catalog Catalog
+		catalog BrokerCatalog
 
 		plan1 = ServicePlan{ID: "Plan-1"}
 		plan2 = ServicePlan{ID: "Plan-2"}
@@ -21,7 +21,7 @@ var _ = Describe("Catalog", func() {
 
 	Describe("Validate", func() {
 		BeforeEach(func() {
-			catalog = Catalog{}
+			catalog = BrokerCatalog{}
 		})
 
 		It("does not return error if all fields are valid", func() {
@@ -43,7 +43,7 @@ var _ = Describe("Catalog", func() {
 
 	Describe("FindService", func() {
 		BeforeEach(func() {
-			catalog = Catalog{
+			catalog = BrokerCatalog{
 				Services: []Service{service1, service2},
 			}
 		})
@@ -62,7 +62,7 @@ var _ = Describe("Catalog", func() {
 
 	Describe("FindServicePlan", func() {
 		BeforeEach(func() {
-			catalog = Catalog{
+			catalog = BrokerCatalog{
 				Services: []Service{service1, service2},
 			}
 		})
