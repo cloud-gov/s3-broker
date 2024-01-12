@@ -304,9 +304,10 @@ func (b *S3Broker) Bind(
 		brokertags.Create,
 		service.Name,
 		servicePlan.Name,
-		instanceID,
-		"",
-		"",
+		brokertags.ResourceGUIDs{
+			InstanceGUID: instanceID,
+		},
+		true,
 	)
 	iamTags := awsiam.ConvertTagsMapToIAMTags(tags)
 
@@ -526,9 +527,12 @@ func (b *S3Broker) createBucket(
 		brokertags.Create,
 		service.Name,
 		servicePlan.Name,
-		details.OrganizationGUID,
-		details.SpaceGUID,
-		instanceID,
+		brokertags.ResourceGUIDs{
+			OrganizationGUID: details.OrganizationGUID,
+			SpaceGUID:        details.SpaceGUID,
+			InstanceGUID:     instanceID,
+		},
+		false,
 	)
 	if err != nil {
 		return nil, err
