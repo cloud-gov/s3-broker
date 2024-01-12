@@ -5,7 +5,7 @@ go 1.20
 require (
 	code.cloudfoundry.org/lager/v3 v3.0.2
 	github.com/aws/aws-sdk-go v1.44.251
-	github.com/cloud-gov/go-broker-tags v0.0.0-20240111215634-5336383be4ec
+	github.com/cloud-gov/go-broker-tags v0.0.0-20240112165407-db7d4c242cf6
 	github.com/cloudfoundry-community/go-cfclient v0.0.0-20180308150602-a2edd96f81ac
 	github.com/minio/madmin-go v1.6.6
 	github.com/minio/pkg v1.7.0
