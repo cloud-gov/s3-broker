@@ -132,33 +132,8 @@ func (s *S3Bucket) Create(bucketName string, bucketDetails BucketDetails) (strin
 		return "", err
 	}
 
-	if len(bucketDetails.Policy) > 0 {
-		bucketDetails.BucketName = bucketName
-		tmpl, err := template.New("policy").Parse(bucketDetails.Policy)
-		if err != nil {
-			s.logger.Error("aws-s3-error", err)
-			return "", err
-		}
-		policy := bytes.Buffer{}
-		err = tmpl.Execute(&policy, bucketDetails)
-		if err != nil {
-			s.logger.Error("aws-s3-error", err)
-			return "", err
-		}
-		putPolicyInput := &s3.PutBucketPolicyInput{
-			Bucket: aws.String(bucketDetails.BucketName),
-			Policy: aws.String(policy.String()),
-		}
-		s.logger.Debug("put-bucket-policy", lager.Data{"input": putPolicyInput})
-		putPolicyOutput, err := s.s3svc.PutBucketPolicy(putPolicyInput)
-		if err != nil {
-			s.logger.Error("aws-s3-error putting bucket policy", err)
-			if awsErr, ok := err.(awserr.Error); ok {
-				return "", errors.New(awsErr.Code() + ": " + awsErr.Message())
-			}
-			return "", err
-		}
-		s.logger.Debug("put-bucket-policy", lager.Data{"output": putPolicyOutput})
+	if err = s.putBucketPolicyWithRetries(bucketDetails, bucketName); err != nil {
+		return "", err
 	}
 
 	return aws.StringValue(createBucketOutput.Location), nil
@@ -225,7 +200,7 @@ func (s *S3Bucket) checkDeletePublicAccessBlock(bucketDetails BucketDetails, buc
 			}
 		}
 		if retries == maxRetries {
-			return fmt.Errorf("could not verify that public access block was deleted for bucket %s", bucketName)
+			s.logger.Info(fmt.Sprintf("could not verify that public access block was deleted for bucket %s, gave up after %d retries", bucketName, retries))
 		}
 	}
 
@@ -312,4 +287,60 @@ func (s *S3Bucket) buildCreateBucketInput(bucketName string, bucketDetails Bucke
 		ObjectOwnership: aws.String(bucketDetails.ObjectOwnership),
 	}
 	return createBucketInput
+}
+
+func (s *S3Bucket) putBucketPolicyWithRetries(
+	bucketDetails BucketDetails,
+	bucketName string,
+) error {
+	if len(bucketDetails.Policy) == 0 {
+		return nil
+	}
+
+	bucketDetails.BucketName = bucketName
+	tmpl, err := template.New("policy").Parse(bucketDetails.Policy)
+	if err != nil {
+		s.logger.Error("aws-s3-error", err)
+		return err
+	}
+
+	policy := bytes.Buffer{}
+	err = tmpl.Execute(&policy, bucketDetails)
+	if err != nil {
+		s.logger.Error("aws-s3-error", err)
+		return err
+	}
+
+	putPolicyInput := &s3.PutBucketPolicyInput{
+		Bucket: aws.String(bucketDetails.BucketName),
+		Policy: aws.String(policy.String()),
+	}
+	s.logger.Debug("put-bucket-policy", lager.Data{"input": putPolicyInput})
+
+	putPolicyOutput, err := s.s3svc.PutBucketPolicy(putPolicyInput)
+	retries := 0
+	maxRetries := 10
+	for err != nil && retries < maxRetries {
+		retries += 1
+
+		s.logger.Error("aws-s3-error putting bucket policy", err)
+
+		if !isAccessDeniedException(err) {
+			return err
+		}
+		putPolicyOutput, err = s.s3svc.PutBucketPolicy(putPolicyInput)
+	}
+	if retries == maxRetries {
+		s.logger.Info(fmt.Sprintf("could not put policy for bucket %s, gave up after %d retries", bucketName, retries))
+	}
+
+	s.logger.Debug("put-bucket-policy", lager.Data{"output": putPolicyOutput})
+	return err
+}
+
+func isAccessDeniedException(err error) bool {
+	if awsErr, ok := err.(awserr.Error); ok {
+		return awsErr.Code() == "AccessDenied"
+	}
+	return false
 }
