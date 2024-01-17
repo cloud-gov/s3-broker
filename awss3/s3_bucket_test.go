@@ -199,3 +199,10 @@ func TestPutBucketPolicyWithRetries(t *testing.T) {
 		})
 	}
 }
+
+func TestIsAccessDeniedException(t *testing.T) {
+	isAccessDeniedException := isAccessDeniedException(awserr.New("AccessDenied", "access denied", errors.New("original error")))
+	if !isAccessDeniedException {
+		t.Fatal("expected isAccessDeniedException() to return true")
+	}
+}
