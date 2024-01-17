@@ -1,4 +1,4 @@
-package awss3_test
+package awss3
 
 import (
 	"errors"
@@ -8,12 +8,13 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/s3"
-
-	"github.com/cloudfoundry-community/s3-broker/awss3"
 )
 
 type MockS3Client struct {
-	deletePublicAccessBlockCalled bool
+	deletePublicAccessBlockCalled    bool
+	numPutBucketPolicyCalls          int
+	numPutBucketPolicyCallsShouldErr int
+	putBucketPolicyErr               error
 }
 
 func (c *MockS3Client) GetBucketLocation(input *s3.GetBucketLocationInput) (*s3.GetBucketLocationOutput, error) {
@@ -36,6 +37,10 @@ func (c *MockS3Client) PutBucketEncryption(input *s3.PutBucketEncryptionInput) (
 }
 
 func (c *MockS3Client) PutBucketPolicy(input *s3.PutBucketPolicyInput) (*s3.PutBucketPolicyOutput, error) {
+	c.numPutBucketPolicyCalls++
+	if c.numPutBucketPolicyCalls <= c.numPutBucketPolicyCallsShouldErr {
+		return nil, c.putBucketPolicyErr
+	}
 	return &s3.PutBucketPolicyOutput{}, nil
 }
 
@@ -69,7 +74,7 @@ func TestCreate(t *testing.T) {
 	cases := []struct {
 		Name                                string
 		BucketName                          string
-		BucketDetails                       awss3.BucketDetails
+		BucketDetails                       BucketDetails
 		Location                            string
 		Error                               error
 		expectDeletePublicAccessBlockCalled bool
@@ -77,7 +82,7 @@ func TestCreate(t *testing.T) {
 		{
 			Name:       "basic bucket",
 			BucketName: "b",
-			BucketDetails: awss3.BucketDetails{
+			BucketDetails: BucketDetails{
 				Policy: "",
 			},
 			Location: "/b",
@@ -86,7 +91,7 @@ func TestCreate(t *testing.T) {
 		{
 			Name:       "public bucket",
 			BucketName: "b",
-			BucketDetails: awss3.BucketDetails{
+			BucketDetails: BucketDetails{
 				Policy: publicPolicy,
 			},
 			Location:                            "/b",
@@ -98,7 +103,7 @@ func TestCreate(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
 			mocks3Client := &MockS3Client{}
-			b := awss3.NewS3Bucket(mocks3Client, lager.NewLogger("test"))
+			b := NewS3Bucket(mocks3Client, lager.NewLogger("test"))
 			location, err := b.Create(tc.BucketName, tc.BucketDetails)
 			if location != tc.Location {
 				t.Errorf("expected location %v, got %v", tc.Location, location)
@@ -110,5 +115,98 @@ func TestCreate(t *testing.T) {
 				t.Errorf("expected public access called: %v, got: %v", tc.expectDeletePublicAccessBlockCalled, mocks3Client.deletePublicAccessBlockCalled)
 			}
 		})
+	}
+}
+
+func TestPutBucketPolicyWithRetries(t *testing.T) {
+	accessDeniedErr := awserr.New("AccessDenied", "access denied", errors.New("original error"))
+	unexpectedErr := errors.New("failure")
+
+	cases := []struct {
+		Name                            string
+		BucketName                      string
+		BucketDetails                   BucketDetails
+		Location                        string
+		Error                           error
+		s3Client                        *MockS3Client
+		expectedNumPutBucketPolicyCalls int
+	}{
+		{
+			Name:       "success - public bucket",
+			BucketName: "b",
+			BucketDetails: BucketDetails{
+				Policy: publicPolicy,
+			},
+			Location:                        "/b",
+			Error:                           nil,
+			s3Client:                        &MockS3Client{},
+			expectedNumPutBucketPolicyCalls: 1,
+		},
+		{
+			Name:       "success - public bucket with max allowed retries",
+			BucketName: "b",
+			BucketDetails: BucketDetails{
+				Policy: publicPolicy,
+			},
+			Location:                        "/b",
+			Error:                           nil,
+			expectedNumPutBucketPolicyCalls: 11,
+			s3Client: &MockS3Client{
+				putBucketPolicyErr:               awserr.New("AccessDenied", "access denied", errors.New("original error")),
+				numPutBucketPolicyCallsShouldErr: 10,
+			},
+		},
+		{
+			Name:       "failure - runs out of retries",
+			BucketName: "b",
+			BucketDetails: BucketDetails{
+				Policy: publicPolicy,
+			},
+			Location:                        "/b",
+			Error:                           accessDeniedErr,
+			expectedNumPutBucketPolicyCalls: 11,
+			s3Client: &MockS3Client{
+				putBucketPolicyErr:               accessDeniedErr,
+				numPutBucketPolicyCallsShouldErr: 11,
+			},
+		},
+		{
+			Name:       "failure - unexpected error",
+			BucketName: "b",
+			BucketDetails: BucketDetails{
+				Policy: publicPolicy,
+			},
+			Location:                        "/b",
+			Error:                           unexpectedErr,
+			expectedNumPutBucketPolicyCalls: 1,
+			s3Client: &MockS3Client{
+				putBucketPolicyErr:               unexpectedErr,
+				numPutBucketPolicyCallsShouldErr: 1,
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.Name, func(t *testing.T) {
+			b := NewS3Bucket(tc.s3Client, lager.NewLogger("test"))
+			err := b.putBucketPolicyWithRetries(tc.BucketDetails, tc.BucketName)
+			if !errors.Is(err, tc.Error) {
+				t.Fatalf("expected return error %v, got %v", tc.Error, err)
+			}
+			if tc.s3Client.numPutBucketPolicyCalls != tc.expectedNumPutBucketPolicyCalls {
+				t.Errorf("expected number of putBucketPolicyWithRetries calls: %d, got: %d", tc.expectedNumPutBucketPolicyCalls, tc.s3Client.numPutBucketPolicyCalls)
+			}
+		})
+	}
+}
+
+func TestIsAccessDeniedException(t *testing.T) {
+	isAccessDenied := isAccessDeniedException(awserr.New("AccessDenied", "access denied", errors.New("original error")))
+	if !isAccessDenied {
+		t.Fatal("expected isAccessDeniedException() to return true")
+	}
+	isAccessDenied = isAccessDeniedException(errors.New("random error"))
+	if isAccessDenied {
+		t.Fatal("expected isAccessDeniedException() to return false")
 	}
 }

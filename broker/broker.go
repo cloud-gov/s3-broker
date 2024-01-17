@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
-	"time"
 
 	"code.cloudfoundry.org/lager/v3"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -19,6 +18,8 @@ import (
 	"github.com/cloudfoundry-community/s3-broker/awsiam"
 	"github.com/cloudfoundry-community/s3-broker/awss3"
 	"github.com/cloudfoundry-community/s3-broker/provider"
+
+	brokertags "github.com/cloud-gov/go-broker-tags"
 )
 
 const instanceIDLogKey = "instance-id"
@@ -46,6 +47,7 @@ type S3Broker struct {
 	user                         awsiam.User
 	cfClient                     *cfclient.Client
 	logger                       lager.Logger
+	tagManager                   brokertags.TagManager
 }
 
 type CatalogExternal struct {
@@ -71,6 +73,7 @@ func New(
 	user awsiam.User,
 	cfClient *cfclient.Client,
 	logger lager.Logger,
+	tagManager brokertags.TagManager,
 ) *S3Broker {
 	return &S3Broker{
 		provider:                     provider,
@@ -87,6 +90,7 @@ func New(
 		user:                         user,
 		cfClient:                     cfClient,
 		logger:                       logger.Session("broker"),
+		tagManager:                   tagManager,
 	}
 }
 
@@ -135,8 +139,10 @@ func (b *S3Broker) Provision(
 		return domain.ProvisionedServiceSpec{}, fmt.Errorf("Service Plan '%s' not found", details.PlanID)
 	}
 
-	var err error
-	instance := b.createBucket(instanceID, servicePlan, provisionParameters, details)
+	instance, err := b.createBucket(instanceID, servicePlan, provisionParameters, details)
+	if err != nil {
+		return domain.ProvisionedServiceSpec{}, err
+	}
 	if _, err = b.bucket.Create(b.bucketName(instanceID), *instance); err != nil {
 		return domain.ProvisionedServiceSpec{}, err
 	}
@@ -261,7 +267,8 @@ func (b *S3Broker) getBucketNames(instanceNames []string, instanceGUID string, p
 
 func (b *S3Broker) Bind(
 	context context.Context,
-	instanceID, bindingID string,
+	instanceID string,
+	bindingID string,
 	details domain.BindDetails,
 	asyncAllowed bool,
 ) (domain.Binding, error) {
@@ -277,17 +284,33 @@ func (b *S3Broker) Bind(
 	var policyARN string
 	var err error
 
-	servicePlan, ok := b.catalog.FindServicePlan(details.PlanID)
-	if !ok {
-		return binding, fmt.Errorf("Service Plan '%s' not found", details.PlanID)
-	}
-
 	bindParameters := BindParameters{}
 	if len(details.RawParameters) > 0 {
 		if err := json.Unmarshal(details.RawParameters, &bindParameters); err != nil {
 			return binding, err
 		}
 	}
+
+	servicePlan, ok := b.catalog.FindServicePlan(details.PlanID)
+	if !ok {
+		return binding, fmt.Errorf("Service Plan '%s' not found", details.PlanID)
+	}
+
+	service, ok := b.catalog.FindService(details.ServiceID)
+	if !ok {
+		return binding, fmt.Errorf("Service '%s' not found", details.ServiceID)
+	}
+
+	tags, err := b.tagManager.GenerateTags(
+		brokertags.Create,
+		service.Name,
+		servicePlan.Name,
+		brokertags.ResourceGUIDs{
+			InstanceGUID: instanceID,
+		},
+		true,
+	)
+	iamTags := awsiam.ConvertTagsMapToIAMTags(tags)
 
 	bucketNames := []string{b.bucketName(instanceID)}
 	if len(bindParameters.AdditionalInstances) > 0 {
@@ -339,7 +362,7 @@ func (b *S3Broker) Bind(
 		}
 	}
 
-	if _, err = b.user.Create(b.userName(bindingID), b.iamPath); err != nil {
+	if _, err = b.user.Create(b.userName(bindingID), b.iamPath, iamTags); err != nil {
 		return binding, err
 	}
 	defer func() {
@@ -359,7 +382,13 @@ func (b *S3Broker) Bind(
 		return binding, err
 	}
 
-	policyARN, err = b.user.CreatePolicy(b.policyName(bindingID), b.iamPath, string(servicePlan.S3Properties.IamPolicy), bucketARNs)
+	policyARN, err = b.user.CreatePolicy(
+		b.policyName(bindingID),
+		b.iamPath,
+		string(servicePlan.S3Properties.IamPolicy),
+		bucketARNs,
+		iamTags,
+	)
 	if err != nil {
 		return binding, err
 	}
@@ -482,62 +511,48 @@ func (b *S3Broker) policyName(bindingID string) string {
 	return fmt.Sprintf("%s-%s", b.policyPrefix, bindingID)
 }
 
-func (b *S3Broker) createBucket(instanceID string, servicePlan ServicePlan, provisionParameters ProvisionParameters, details brokerapi.ProvisionDetails) *awss3.BucketDetails {
+func (b *S3Broker) createBucket(
+	instanceID string,
+	servicePlan ServicePlan,
+	provisionParameters ProvisionParameters,
+	details brokerapi.ProvisionDetails,
+) (*awss3.BucketDetails, error) {
 	bucketDetails := b.bucketFromPlan(servicePlan)
-	bucketDetails.Tags = getBucketTags("Created", details.ServiceID, details.PlanID, details.OrganizationGUID, details.SpaceGUID, instanceID)
+
+	service, ok := b.catalog.FindService(details.ServiceID)
+	if !ok {
+		return nil, fmt.Errorf("Service '%s' not found", details.ServiceID)
+	}
+
+	tags, err := b.tagManager.GenerateTags(
+		brokertags.Create,
+		service.Name,
+		servicePlan.Name,
+		brokertags.ResourceGUIDs{
+			OrganizationGUID: details.OrganizationGUID,
+			SpaceGUID:        details.SpaceGUID,
+			InstanceGUID:     instanceID,
+		},
+		false,
+	)
+	if err != nil {
+		return nil, err
+	}
+	bucketDetails.Tags = tags
+
 	bucketDetails.Policy = string(servicePlan.S3Properties.BucketPolicy)
 	bucketDetails.Encryption = string(servicePlan.S3Properties.Encryption)
 	bucketDetails.AwsPartition = b.awsPartition
 	bucketDetails.ObjectOwnership = provisionParameters.ObjectOwnership
-	return bucketDetails
+	return bucketDetails, nil
 }
 
 func (b *S3Broker) modifyBucket(instanceID string, servicePlan ServicePlan, updateParameters UpdateParameters, details brokerapi.UpdateDetails) *awss3.BucketDetails {
 	bucketDetails := b.bucketFromPlan(servicePlan)
-	bucketDetails.Tags = getBucketTags("Updated", details.ServiceID, details.PlanID, "", "", instanceID)
 	return bucketDetails
 }
 
 func (b *S3Broker) bucketFromPlan(servicePlan ServicePlan) *awss3.BucketDetails {
 	bucketDetails := &awss3.BucketDetails{}
 	return bucketDetails
-}
-
-func getBucketTags(
-	action,
-	serviceID string,
-	planID string,
-	organizationID string,
-	spaceID string,
-	instanceID string,
-) map[string]string {
-	tags := make(map[string]string)
-
-	tags["Owner"] = "Cloud Foundry"
-
-	tags[action+" by"] = "AWS S3 Service Broker"
-
-	tags[action+" at"] = time.Now().Format(time.RFC822Z)
-
-	if serviceID != "" {
-		tags["Service GUID"] = serviceID
-	}
-
-	if planID != "" {
-		tags["Plan GUID"] = planID
-	}
-
-	if organizationID != "" {
-		tags["Organization GUID"] = organizationID
-	}
-
-	if spaceID != "" {
-		tags["Space GUID"] = spaceID
-	}
-
-	if instanceID != "" {
-		tags["Instance GUID"] = instanceID
-	}
-
-	return tags
 }

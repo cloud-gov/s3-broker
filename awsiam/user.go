@@ -11,12 +11,12 @@ import (
 
 type User interface {
 	Describe(userName string) (UserDetails, error)
-	Create(userName, iamPath string) (string, error)
+	Create(userName, iamPath string, iamTags []*iam.Tag) (string, error)
 	Delete(userName string) error
 	ListAccessKeys(userName string) ([]string, error)
 	CreateAccessKey(userName string) (string, string, error)
 	DeleteAccessKey(userName, accessKeyID string) error
-	CreatePolicy(policyName, iamPath, policyTemplate string, resources []string) (string, error)
+	CreatePolicy(policyName, iamPath, policyTemplate string, resources []string, iamTags []*iam.Tag) (string, error)
 	DeletePolicy(policyARN string) error
 	ListAttachedUserPolicies(userName, iamPath string) ([]string, error)
 	AttachUserPolicy(userName, policyARN string) error
@@ -34,20 +34,8 @@ var (
 )
 
 func NewUser(provider string, logger lager.Logger, awsSession *session.Session, endpoint string, insecureSkipVerify bool) (User, error) {
-	var user User
-	if provider == "minio" {
-		fmt.Printf("Setting up MinIO user provider...\n")
-		awscreds, err := awsSession.Config.Credentials.Get()
-		if err != nil {
-			return nil, fmt.Errorf("Failure to pull AWS credentials: %v", err)
-		}
-		user = NewMinioUser(logger, endpoint, awscreds.AccessKeyID, awscreds.SecretAccessKey, insecureSkipVerify, awsSession.Config.HTTPClient.Transport)
-	} else if provider == "" || provider == "aws" {
-		fmt.Printf("Setting up AWS IAM user provider...\n")
-		iamsvc := iam.New(awsSession)
-		user = NewIAMUser(iamsvc, logger)
-	} else {
-		return nil, fmt.Errorf("Unknown provider type: %s", provider)
-	}
+	fmt.Printf("Setting up AWS IAM user provider...\n")
+	iamsvc := iam.New(awsSession)
+	user := NewIAMUser(iamsvc, logger)
 	return user, nil
 }

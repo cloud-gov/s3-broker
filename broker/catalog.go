@@ -7,7 +7,14 @@ import (
 	"github.com/pivotal-cf/brokerapi/v10"
 )
 
-type Catalog struct {
+type Catalog interface {
+	Validate() error
+	FindService(serviceID string) (service Service, found bool)
+	FindServicePlan(planID string) (plan ServicePlan, found bool)
+	ListServicePlans() []ServicePlan
+}
+
+type BrokerCatalog struct {
 	Services []Service `yaml:"services,omitempty"`
 }
 
@@ -40,7 +47,7 @@ type S3Properties struct {
 	Encryption   string `yaml:"encryption,omitempty"`
 }
 
-func (c Catalog) Validate() error {
+func (c BrokerCatalog) Validate() error {
 	for _, service := range c.Services {
 		if err := service.Validate(); err != nil {
 			return fmt.Errorf("Validating Services configuration: %s", err)
@@ -50,7 +57,7 @@ func (c Catalog) Validate() error {
 	return nil
 }
 
-func (c Catalog) FindService(serviceID string) (service Service, found bool) {
+func (c BrokerCatalog) FindService(serviceID string) (service Service, found bool) {
 	for _, service := range c.Services {
 		if service.ID == serviceID {
 			return service, true
@@ -60,7 +67,7 @@ func (c Catalog) FindService(serviceID string) (service Service, found bool) {
 	return service, false
 }
 
-func (c Catalog) FindServicePlan(planID string) (plan ServicePlan, found bool) {
+func (c BrokerCatalog) FindServicePlan(planID string) (plan ServicePlan, found bool) {
 	for _, service := range c.Services {
 		for _, plan := range service.Plans {
 			if plan.ID == planID {
@@ -72,7 +79,7 @@ func (c Catalog) FindServicePlan(planID string) (plan ServicePlan, found bool) {
 	return plan, false
 }
 
-func (c Catalog) ListServicePlans() []ServicePlan {
+func (c BrokerCatalog) ListServicePlans() []ServicePlan {
 	var plans []ServicePlan
 	for _, service := range c.Services {
 		for _, plan := range service.Plans {
