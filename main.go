@@ -14,7 +14,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	brokertags "github.com/cloud-gov/go-broker-tags"
-	"github.com/cloudfoundry-community/go-cfclient"
+	cfclient "github.com/cloudfoundry-community/go-cfclient/v3/client"
+	cfconfig "github.com/cloudfoundry-community/go-cfclient/v3/config"
 	"github.com/pivotal-cf/brokerapi/v10"
 
 	"github.com/cloudfoundry-community/s3-broker/awsiam"
@@ -86,17 +87,17 @@ func main() {
 
 	var client *cfclient.Client
 	if config.CFConfig != nil {
-		cfConfig := cfclient.Config{
-			ApiAddress:        config.CFConfig.ApiAddress,
-			Username:          config.CFConfig.Username,
-			Password:          config.CFConfig.Password,
-			ClientID:          config.CFConfig.ClientID,
-			ClientSecret:      config.CFConfig.ClientSecret,
-			SkipSslValidation: config.CFConfig.SkipSslValidation,
-			Token:             config.CFConfig.Token,
-			UserAgent:         config.CFConfig.UserAgent,
+		cfConfig := cfconfig.Config{
+			APIEndpointURL: config.CFConfig.ApiAddress,
+			Username:       config.CFConfig.Username,
+			Password:       config.CFConfig.Password,
+			ClientID:       config.CFConfig.ClientID,
+			ClientSecret:   config.CFConfig.ClientSecret,
+			AccessToken:    config.CFConfig.Token,
+			UserAgent:      config.CFConfig.UserAgent,
 		}
-		client, err = cfclient.NewClient(&cfConfig)
+		cfConfig.WithSkipTLSValidation(config.CFConfig.SkipSslValidation)
+		client, err = cfclient.New(&cfConfig)
 		if err != nil {
 			log.Fatalf("Error creating CF client: %s", err)
 		}

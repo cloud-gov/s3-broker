@@ -6,11 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"strings"
 
 	"code.cloudfoundry.org/lager/v3"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/cloudfoundry-community/go-cfclient"
+	cfclient "github.com/cloudfoundry-community/go-cfclient/v3/client"
 	"github.com/pivotal-cf/brokerapi/v10"
 	"github.com/pivotal-cf/brokerapi/v10/domain"
 	"github.com/pivotal-cf/brokerapi/v10/domain/apiresponses"
@@ -221,39 +220,61 @@ func (b *S3Broker) GetBucketURI(credentials Credentials) string {
 	)
 }
 
-func (b *S3Broker) getBucketNames(instanceNames []string, instanceGUID string, planIDs []string) ([]string, error) {
-	var bucketNames []string
+// getBucketNames gets the underlying s3 bucket name for each service instance
+// in instanceNames, provided they are in the same space as instanceGUID, or
+// shared to that space. An error is returned if an instance is not found, or
+// if an instance is not shared to the space.
+func (b *S3Broker) getBucketNames(ctx context.Context, instanceNames []string, instanceGUID string) ([]string, error) {
+	// Plans have IDs in the catalog distinct from their IDs in the Cloud Foundry cluster.
+	// Translate the catalog plan IDs to service plan IDs.
+	var planCatalogIDs []string
 
-	instance, err := b.cfClient.ServiceInstanceByGuid(instanceGUID)
+	for _, plan := range b.catalog.ListServicePlans() {
+		planCatalogIDs = append(planCatalogIDs, plan.ID)
+	}
+
+	opts := cfclient.NewServicePlanListOptions()
+	opts.BrokerCatalogIDs = cfclient.Filter{
+		Values: planCatalogIDs,
+	}
+	plans, err := b.cfClient.ServicePlans.ListAll(ctx, opts)
 	if err != nil {
 		return nil, err
 	}
 
-	planQuery := url.Values{}
-	planQuery.Add("q", fmt.Sprintf("unique_id IN %s", strings.Join(planIDs, ",")))
-	plans, err := b.cfClient.ListServicePlansByQuery(planQuery)
-	if err != nil {
-		return nil, err
-	}
-
-	var planGUIDs []string
+	var planIDs []string
 	for _, plan := range plans {
-		planGUIDs = append(planGUIDs, plan.Guid)
+		planIDs = append(planIDs, plan.GUID)
 	}
 
-	query := url.Values{}
-	query.Add("q", fmt.Sprintf("space_guid:%s", instance.SpaceGuid))
-	query.Add("q", fmt.Sprintf("service_plan_guid IN %s", strings.Join(planGUIDs, ",")))
-	instances, err := b.cfClient.ListServiceInstancesByQuery(query)
+	// Get the space the contains the instance.
+	instance, err := b.cfClient.ServiceInstances.Get(ctx, instanceGUID)
+	if err != nil {
+		return nil, err
+	}
+	space := instance.Relationships.Space.Data.GUID
+
+	// Get all service instances with s3 plans in the space.
+	sopts := cfclient.NewServiceInstanceListOptions()
+	sopts.ServicePlanGUIDs = cfclient.Filter{
+		Values: planIDs,
+	}
+	sopts.SpaceGUIDs = cfclient.Filter{
+		Values: []string{space},
+	}
+	instances, err := b.cfClient.ServiceInstances.ListAll(ctx, sopts)
 	if err != nil {
 		return nil, err
 	}
 
+	// Map from instance names to instance GUIDs.
 	instanceGUIDs := make(map[string]string, len(instanceNames))
 	for _, instance := range instances {
-		instanceGUIDs[instance.Name] = instance.Guid
+		instanceGUIDs[instance.Name] = instance.GUID
 	}
 
+	// Map from instance names to bucket names.
+	var bucketNames []string
 	for _, instanceName := range instanceNames {
 		instanceGUID, ok := instanceGUIDs[instanceName]
 		if !ok {
@@ -317,11 +338,8 @@ func (b *S3Broker) Bind(
 		if b.cfClient == nil {
 			return binding, ErrNoClientConfigured
 		}
-		var planIDs []string
-		for _, plan := range b.catalog.ListServicePlans() {
-			planIDs = append(planIDs, plan.ID)
-		}
-		additionalNames, err := b.getBucketNames(bindParameters.AdditionalInstances, instanceID, planIDs)
+
+		additionalNames, err := b.getBucketNames(context, bindParameters.AdditionalInstances, instanceID)
 		if err != nil {
 			return binding, err
 		}

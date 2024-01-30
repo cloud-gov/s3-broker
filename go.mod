@@ -6,7 +6,8 @@ require (
 	code.cloudfoundry.org/lager/v3 v3.0.2
 	github.com/aws/aws-sdk-go v1.44.251
 	github.com/cloud-gov/go-broker-tags v0.0.0-20240112192542-8f1bb5859679
-	github.com/cloudfoundry-community/go-cfclient v0.0.0-20180308150602-a2edd96f81ac
+	github.com/cloudfoundry-community/go-cfclient/v3 v3.0.0-alpha.6
+	github.com/google/go-cmp v0.6.0
 	github.com/minio/madmin-go v1.6.6
 	github.com/minio/pkg v1.7.0
 	github.com/onsi/ginkgo/v2 v2.13.0
@@ -19,19 +20,14 @@ require (
 )
 
 require (
-	code.cloudfoundry.org/gofileutils v0.0.0-20170111115228-4d0c80011a0f // indirect
-	github.com/cloudfoundry-community/go-cfclient/v3 v3.0.0-alpha.6 // indirect
-	github.com/cloudfoundry/gofileutils v0.0.0-20170111115228-4d0c80011a0f // indirect
 	github.com/codegangsta/inject v0.0.0-20150114235600-33e0aa1cb7c0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-chi/chi/v5 v5.0.10 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-martini/martini v0.0.0-20170121215854-22fa46961aab // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/pprof v0.0.0-20210407192527-94a9f03dee38 // indirect
 	github.com/google/uuid v1.3.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
@@ -55,7 +51,6 @@ require (
 	github.com/secure-io/sio-go v0.3.1 // indirect
 	github.com/shirou/gopsutil/v3 v3.23.3 // indirect
 	github.com/shoenig/go-m1cpu v0.1.5 // indirect
-	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
 	github.com/tinylib/msgp v1.1.8 // indirect
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
