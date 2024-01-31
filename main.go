@@ -14,7 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	brokertags "github.com/cloud-gov/go-broker-tags"
-	cfclient "github.com/cloudfoundry-community/go-cfclient/v3/client"
+	cf "github.com/cloudfoundry-community/go-cfclient/v3/client"
 	cfconfig "github.com/cloudfoundry-community/go-cfclient/v3/config"
 	"github.com/pivotal-cf/brokerapi/v10"
 
@@ -85,7 +85,7 @@ func main() {
 		log.Fatalf("Failure to configure user management: %s", err)
 	}
 
-	var client *cfclient.Client
+	var client *cf.Client
 	if config.CFConfig != nil {
 		cfConfig := cfconfig.Config{
 			APIEndpointURL: config.CFConfig.ApiAddress,
@@ -97,7 +97,7 @@ func main() {
 			UserAgent:      config.CFConfig.UserAgent,
 		}
 		cfConfig.WithSkipTLSValidation(config.CFConfig.SkipSslValidation)
-		client, err = cfclient.New(&cfConfig)
+		client, err = cf.New(&cfConfig)
 		if err != nil {
 			log.Fatalf("Error creating CF client: %s", err)
 		}

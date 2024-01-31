@@ -9,7 +9,7 @@ import (
 
 	"code.cloudfoundry.org/lager/v3"
 	"github.com/aws/aws-sdk-go/service/s3"
-	cfclient "github.com/cloudfoundry-community/go-cfclient/v3/client"
+	cf "github.com/cloudfoundry-community/go-cfclient/v3/client"
 	"github.com/pivotal-cf/brokerapi/v10"
 	"github.com/pivotal-cf/brokerapi/v10/domain"
 	"github.com/pivotal-cf/brokerapi/v10/domain/apiresponses"
@@ -44,7 +44,7 @@ type S3Broker struct {
 	catalog                      Catalog
 	bucket                       awss3.Bucket
 	user                         awsiam.User
-	cf                           *cfclient.Client
+	cf                           *cf.Client
 	logger                       lager.Logger
 	tagManager                   brokertags.TagManager
 }
@@ -70,7 +70,7 @@ func New(
 	provider provider.Provider,
 	bucket awss3.Bucket,
 	user awsiam.User,
-	cfClient *cfclient.Client,
+	cfClient *cf.Client,
 	logger lager.Logger,
 	tagManager brokertags.TagManager,
 ) *S3Broker {
@@ -233,8 +233,8 @@ func (b *S3Broker) getBucketNames(ctx context.Context, instanceNames []string, i
 		planCatalogIDs = append(planCatalogIDs, plan.ID)
 	}
 
-	opts := cfclient.NewServicePlanListOptions()
-	opts.BrokerCatalogIDs = cfclient.Filter{
+	opts := cf.NewServicePlanListOptions()
+	opts.BrokerCatalogIDs = cf.Filter{
 		Values: planCatalogIDs,
 	}
 	plans, err := b.cf.ServicePlans.ListAll(ctx, opts)
@@ -255,11 +255,11 @@ func (b *S3Broker) getBucketNames(ctx context.Context, instanceNames []string, i
 	space := instance.Relationships.Space.Data.GUID
 
 	// Get all service instances with s3 plans in the space.
-	sopts := cfclient.NewServiceInstanceListOptions()
-	sopts.ServicePlanGUIDs = cfclient.Filter{
+	sopts := cf.NewServiceInstanceListOptions()
+	sopts.ServicePlanGUIDs = cf.Filter{
 		Values: planIDs,
 	}
-	sopts.SpaceGUIDs = cfclient.Filter{
+	sopts.SpaceGUIDs = cf.Filter{
 		Values: []string{space},
 	}
 	instances, err := b.cf.ServiceInstances.ListAll(ctx, sopts)
