@@ -44,7 +44,7 @@ type S3Broker struct {
 	catalog                      Catalog
 	bucket                       awss3.Bucket
 	user                         awsiam.User
-	cfClient                     *cfclient.Client
+	cf                           *cfclient.Client
 	logger                       lager.Logger
 	tagManager                   brokertags.TagManager
 }
@@ -87,7 +87,7 @@ func New(
 		catalog:                      config.Catalog,
 		bucket:                       bucket,
 		user:                         user,
-		cfClient:                     cfClient,
+		cf:                           cfClient,
 		logger:                       logger.Session("broker"),
 		tagManager:                   tagManager,
 	}
@@ -237,7 +237,7 @@ func (b *S3Broker) getBucketNames(ctx context.Context, instanceNames []string, i
 	opts.BrokerCatalogIDs = cfclient.Filter{
 		Values: planCatalogIDs,
 	}
-	plans, err := b.cfClient.ServicePlans.ListAll(ctx, opts)
+	plans, err := b.cf.ServicePlans.ListAll(ctx, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -248,7 +248,7 @@ func (b *S3Broker) getBucketNames(ctx context.Context, instanceNames []string, i
 	}
 
 	// Get the space the contains the instance.
-	instance, err := b.cfClient.ServiceInstances.Get(ctx, instanceGUID)
+	instance, err := b.cf.ServiceInstances.Get(ctx, instanceGUID)
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +262,7 @@ func (b *S3Broker) getBucketNames(ctx context.Context, instanceNames []string, i
 	sopts.SpaceGUIDs = cfclient.Filter{
 		Values: []string{space},
 	}
-	instances, err := b.cfClient.ServiceInstances.ListAll(ctx, sopts)
+	instances, err := b.cf.ServiceInstances.ListAll(ctx, sopts)
 	if err != nil {
 		return nil, err
 	}
@@ -335,7 +335,7 @@ func (b *S3Broker) Bind(
 
 	bucketNames := []string{b.bucketName(instanceID)}
 	if len(bindParameters.AdditionalInstances) > 0 {
-		if b.cfClient == nil {
+		if b.cf == nil {
 			return binding, ErrNoClientConfigured
 		}
 
