@@ -14,9 +14,9 @@ import (
 	"github.com/pivotal-cf/brokerapi/v10/domain"
 	"github.com/pivotal-cf/brokerapi/v10/domain/apiresponses"
 
-	"github.com/cloudfoundry-community/s3-broker/awsiam"
-	"github.com/cloudfoundry-community/s3-broker/awss3"
-	"github.com/cloudfoundry-community/s3-broker/provider"
+	"github.com/cloud-gov/s3-broker/awsiam"
+	"github.com/cloud-gov/s3-broker/awss3"
+	"github.com/cloud-gov/s3-broker/provider"
 
 	brokertags "github.com/cloud-gov/go-broker-tags"
 )

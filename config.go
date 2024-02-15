@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/cloudfoundry-community/s3-broker/broker"
+	"github.com/cloud-gov/s3-broker/broker"
 	"gopkg.in/yaml.v2"
 )
 
