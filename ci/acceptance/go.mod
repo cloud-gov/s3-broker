@@ -1,10 +1,10 @@
 module acceptance-test
 
-go 1.20
+go 1.22
 
 require (
 	github.com/aws/aws-sdk-go v1.44.252
-	github.com/cloudfoundry-community/go-cfenv v1.18.0
+	github.com/cloud-gov/go-cfenv v1.19.0
 )
 
 require (

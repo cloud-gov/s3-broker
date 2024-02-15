@@ -8,7 +8,7 @@ ENV GOARM       5
 ENV GOOS        linux
 
 # Build BOSH Registry
-RUN go get -a -installsuffix cgo -ldflags '-s' github.com/cloudfoundry-community/s3-broker
+RUN go get -a -installsuffix cgo -ldflags '-s' github.com/cloud-gov/s3-broker
 
 # Add files
 ADD Dockerfile.final /go/bin/Dockerfile
