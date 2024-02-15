@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	brokertags "github.com/cloud-gov/go-broker-tags"
-	"github.com/cloudfoundry-community/s3-broker/awss3"
+	"github.com/cloud-gov/s3-broker/awss3"
 	"github.com/google/go-cmp/cmp"
 	"github.com/pivotal-cf/brokerapi/v10"
 )

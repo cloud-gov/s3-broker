@@ -18,10 +18,10 @@ import (
 	cfconfig "github.com/cloudfoundry-community/go-cfclient/v3/config"
 	"github.com/pivotal-cf/brokerapi/v10"
 
-	"github.com/cloudfoundry-community/s3-broker/awsiam"
-	"github.com/cloudfoundry-community/s3-broker/awss3"
-	"github.com/cloudfoundry-community/s3-broker/broker"
-	"github.com/cloudfoundry-community/s3-broker/provider"
+	"github.com/cloud-gov/s3-broker/awsiam"
+	"github.com/cloud-gov/s3-broker/awss3"
+	"github.com/cloud-gov/s3-broker/broker"
+	"github.com/cloud-gov/s3-broker/provider"
 )
 
 var (

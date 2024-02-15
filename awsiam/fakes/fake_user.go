@@ -1,7 +1,7 @@
 package fakes
 
 import (
-	"github.com/cloudfoundry-community/s3-broker/awsiam"
+	"github.com/cloud-gov/s3-broker/awsiam"
 )
 
 type FakeUser struct {

@@ -1,6 +1,6 @@
-module github.com/cloudfoundry-community/s3-broker
+module github.com/cloud-gov/s3-broker
 
-go 1.20
+go 1.22
 
 require (
 	code.cloudfoundry.org/lager/v3 v3.0.2

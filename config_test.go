@@ -4,9 +4,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	. "github.com/cloudfoundry-community/s3-broker"
+	. "github.com/cloud-gov/s3-broker"
 
-	"github.com/cloudfoundry-community/s3-broker/broker"
+	"github.com/cloud-gov/s3-broker/broker"
 )
 
 var _ = Describe("Config", func() {
