@@ -20,14 +20,9 @@ type Config struct {
 }
 
 type CFConfig struct {
-	ApiAddress        string `yaml:"api_url"`
-	Username          string `yaml:"user"`
-	Password          string `yaml:"password"`
-	ClientID          string `yaml:"client_id"`
-	ClientSecret      string `yaml:"client_secret"`
-	SkipSslValidation bool   `yaml:"skip_ssl_validation"`
-	Token             string `yaml:"auth_token"`
-	UserAgent         string `yaml:"user_agent"`
+	ApiAddress   string `yaml:"api_url"`
+	ClientID     string `yaml:"client_id"`
+	ClientSecret string `yaml:"client_secret"`
 }
 
 func LoadConfig(configFile string) (config *Config, err error) {
