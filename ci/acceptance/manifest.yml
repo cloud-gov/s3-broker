@@ -5,3 +5,4 @@ applications:
   memory: 128M
   env:
     GOPACKAGENAME: acceptance-test
+    GOVERSION: go1.22
