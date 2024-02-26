@@ -87,17 +87,11 @@ func main() {
 
 	var client *cf.Client
 	if config.CFConfig != nil {
-		cfConfig := cfconfig.Config{
-			APIEndpointURL: config.CFConfig.ApiAddress,
-			Username:       config.CFConfig.Username,
-			Password:       config.CFConfig.Password,
-			ClientID:       config.CFConfig.ClientID,
-			ClientSecret:   config.CFConfig.ClientSecret,
-			AccessToken:    config.CFConfig.Token,
-			UserAgent:      config.CFConfig.UserAgent,
+		cfConfig, err := cfconfig.NewClientSecret(config.CFConfig.ApiAddress, config.CFConfig.ClientID, config.CFConfig.ClientSecret)
+		if err != nil {
+			log.Fatalf("Error creating CF config: %s", err)
 		}
-		cfConfig.WithSkipTLSValidation(config.CFConfig.SkipSslValidation)
-		client, err = cf.New(&cfConfig)
+		client, err = cf.New(cfConfig)
 		if err != nil {
 			log.Fatalf("Error creating CF client: %s", err)
 		}
