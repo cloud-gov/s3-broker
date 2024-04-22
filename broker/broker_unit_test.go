@@ -1,13 +1,18 @@
 package broker
 
 import (
+	"context"
 	"errors"
 	"testing"
 
+	"code.cloudfoundry.org/lager/v3"
+	"github.com/aws/aws-sdk-go/service/iam"
 	brokertags "github.com/cloud-gov/go-broker-tags"
+	"github.com/cloud-gov/s3-broker/awsiam"
 	"github.com/cloud-gov/s3-broker/awss3"
 	"github.com/google/go-cmp/cmp"
 	"github.com/pivotal-cf/brokerapi/v10"
+	"github.com/pivotal-cf/brokerapi/v10/domain"
 )
 
 type mockTagGenerator struct {
@@ -58,6 +63,52 @@ func (c mockCatalog) FindServicePlan(planID string) (plan ServicePlan, found boo
 }
 
 func (c mockCatalog) ListServicePlans() []ServicePlan {
+	return nil
+}
+
+type mockUser struct{}
+
+func (u mockUser) ListAccessKeys(userName string) ([]string, error) {
+	return []string{}, nil
+}
+
+func (u mockUser) ListAttachedUserPolicies(userName, iamPath string) ([]string, error) {
+	return []string{}, nil
+}
+
+func (u mockUser) Delete(userName string) error {
+	return nil
+}
+
+func (u mockUser) AttachUserPolicy(userName, policyARN string) error {
+	return nil
+}
+
+func (u mockUser) Describe(userName string) (awsiam.UserDetails, error) {
+	return awsiam.UserDetails{}, nil
+}
+
+func (u mockUser) Create(userName, iamPath string, iamTags []*iam.Tag) (string, error) {
+	return "", nil
+}
+
+func (u mockUser) CreateAccessKey(userName string) (string, string, error) {
+	return "", "", nil
+}
+
+func (u mockUser) DeleteAccessKey(userName, accessKeyID string) error {
+	return nil
+}
+
+func (u mockUser) CreatePolicy(policyName, iamPath, policyTemplate string, resources []string, iamTags []*iam.Tag) (string, error) {
+	return "", nil
+}
+
+func (u mockUser) DeletePolicy(policyARN string) error {
+	return nil
+}
+
+func (u mockUser) DetachUserPolicy(userName, policyARN string) error {
 	return nil
 }
 
@@ -177,6 +228,43 @@ func TestCreateBucket(t *testing.T) {
 
 			if !cmp.Equal(details, test.expectedDetails) {
 				t.Errorf(cmp.Diff(details, test.expectedDetails))
+			}
+		})
+	}
+}
+
+func TestUnbind(t *testing.T) {
+	logger := lager.NewLogger("broker-unit-test")
+
+	testCases := map[string]struct {
+		instanceId    string
+		bindingId     string
+		unbindDetails domain.UnbindDetails
+		user          *mockUser
+	}{
+		"success": {
+			instanceId:    "fake-instance-id",
+			bindingId:     "fake-binding-id",
+			unbindDetails: domain.UnbindDetails{},
+			user:          &mockUser{},
+		},
+	}
+
+	for name, test := range testCases {
+		t.Run(name, func(t *testing.T) {
+			broker := &S3Broker{
+				user:   test.user,
+				logger: logger,
+			}
+			_, err := broker.Unbind(
+				context.Background(),
+				test.instanceId,
+				test.bindingId,
+				test.unbindDetails,
+				false,
+			)
+			if err != nil {
+				t.Fatal(err)
 			}
 		})
 	}

@@ -428,7 +428,8 @@ func (b *S3Broker) Bind(
 
 func (b *S3Broker) Unbind(
 	context context.Context,
-	instanceID, bindingID string,
+	instanceID,
+	bindingID string,
 	details domain.UnbindDetails,
 	asyncAllowed bool,
 ) (domain.UnbindSpec, error) {
