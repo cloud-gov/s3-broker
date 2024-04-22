@@ -240,23 +240,32 @@ func TestUnbind(t *testing.T) {
 		instanceId    string
 		bindingId     string
 		unbindDetails domain.UnbindDetails
-		user          *mockUser
+		broker        *S3Broker
 	}{
 		"success": {
 			instanceId:    "fake-instance-id",
 			bindingId:     "fake-binding-id",
 			unbindDetails: domain.UnbindDetails{},
-			user:          &mockUser{},
+			broker: &S3Broker{
+				logger: logger,
+				user:   &mockUser{},
+			},
+		},
+		"user was already deleted": {
+			instanceId:    "fake-instance-id",
+			bindingId:     "deleted-1",
+			unbindDetails: domain.UnbindDetails{},
+			broker: &S3Broker{
+				logger:     logger,
+				user:       &mockUser{},
+				userPrefix: "test-user-",
+			},
 		},
 	}
 
 	for name, test := range testCases {
 		t.Run(name, func(t *testing.T) {
-			broker := &S3Broker{
-				user:   test.user,
-				logger: logger,
-			}
-			_, err := broker.Unbind(
+			_, err := test.broker.Unbind(
 				context.Background(),
 				test.instanceId,
 				test.bindingId,
