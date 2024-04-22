@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"code.cloudfoundry.org/lager/v3"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/iam"
 	brokertags "github.com/cloud-gov/go-broker-tags"
 	"github.com/cloud-gov/s3-broker/awsiam"
@@ -66,7 +67,9 @@ func (c mockCatalog) ListServicePlans() []ServicePlan {
 	return nil
 }
 
-type mockUser struct{}
+type mockUser struct {
+	deletedUser string
+}
 
 func (u mockUser) ListAccessKeys(userName string) ([]string, error) {
 	return []string{}, nil
@@ -77,6 +80,9 @@ func (u mockUser) ListAttachedUserPolicies(userName, iamPath string) ([]string, 
 }
 
 func (u mockUser) Delete(userName string) error {
+	if userName == u.deletedUser {
+		return awserr.New("NoSuchEntity", "no such user", errors.New("original error"))
+	}
 	return nil
 }
 
@@ -256,9 +262,11 @@ func TestUnbind(t *testing.T) {
 			bindingId:     "deleted-1",
 			unbindDetails: domain.UnbindDetails{},
 			broker: &S3Broker{
-				logger:     logger,
-				user:       &mockUser{},
-				userPrefix: "test-user-",
+				logger: logger,
+				user: &mockUser{
+					deletedUser: "test-user-deleted-1",
+				},
+				userPrefix: "test-user",
 			},
 		},
 	}
