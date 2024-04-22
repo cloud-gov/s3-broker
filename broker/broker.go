@@ -8,6 +8,8 @@ import (
 	"net/url"
 
 	"code.cloudfoundry.org/lager/v3"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/s3"
 	cf "github.com/cloudfoundry-community/go-cfclient/v3/client"
 	"github.com/pivotal-cf/brokerapi/v10"
@@ -463,6 +465,10 @@ func (b *S3Broker) Unbind(
 	}
 
 	if err := b.user.Delete(b.userName(bindingID)); err != nil {
+		// Do not return error if user was already deleted
+		if awserr, ok := err.(awserr.Error); ok && awserr.Code() == iam.ErrCodeNoSuchEntityException {
+			return domain.UnbindSpec{}, nil
+		}
 		return domain.UnbindSpec{}, err
 	}
 
