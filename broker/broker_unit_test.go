@@ -68,53 +68,55 @@ func (c mockCatalog) ListServicePlans() []ServicePlan {
 }
 
 type mockUser struct {
-	deletedUser string
+	deletedUser  string
+	deleteCalled bool
 }
 
-func (u mockUser) ListAccessKeys(userName string) ([]string, error) {
+func (u *mockUser) ListAccessKeys(userName string) ([]string, error) {
 	return []string{}, nil
 }
 
-func (u mockUser) ListAttachedUserPolicies(userName, iamPath string) ([]string, error) {
+func (u *mockUser) ListAttachedUserPolicies(userName, iamPath string) ([]string, error) {
 	return []string{}, nil
 }
 
-func (u mockUser) Delete(userName string) error {
+func (u *mockUser) Delete(userName string) error {
+	u.deleteCalled = true
 	if userName == u.deletedUser {
 		return awserr.New("NoSuchEntity", "no such user", errors.New("original error"))
 	}
 	return nil
 }
 
-func (u mockUser) AttachUserPolicy(userName, policyARN string) error {
+func (u *mockUser) AttachUserPolicy(userName, policyARN string) error {
 	return nil
 }
 
-func (u mockUser) Describe(userName string) (awsiam.UserDetails, error) {
+func (u *mockUser) Describe(userName string) (awsiam.UserDetails, error) {
 	return awsiam.UserDetails{}, nil
 }
 
-func (u mockUser) Create(userName, iamPath string, iamTags []*iam.Tag) (string, error) {
+func (u *mockUser) Create(userName, iamPath string, iamTags []*iam.Tag) (string, error) {
 	return "", nil
 }
 
-func (u mockUser) CreateAccessKey(userName string) (string, string, error) {
+func (u *mockUser) CreateAccessKey(userName string) (string, string, error) {
 	return "", "", nil
 }
 
-func (u mockUser) DeleteAccessKey(userName, accessKeyID string) error {
+func (u *mockUser) DeleteAccessKey(userName, accessKeyID string) error {
 	return nil
 }
 
-func (u mockUser) CreatePolicy(policyName, iamPath, policyTemplate string, resources []string, iamTags []*iam.Tag) (string, error) {
+func (u *mockUser) CreatePolicy(policyName, iamPath, policyTemplate string, resources []string, iamTags []*iam.Tag) (string, error) {
 	return "", nil
 }
 
-func (u mockUser) DeletePolicy(policyARN string) error {
+func (u *mockUser) DeletePolicy(policyARN string) error {
 	return nil
 }
 
-func (u mockUser) DetachUserPolicy(userName, policyARN string) error {
+func (u *mockUser) DetachUserPolicy(userName, policyARN string) error {
 	return nil
 }
 
@@ -280,6 +282,11 @@ func TestUnbind(t *testing.T) {
 				test.unbindDetails,
 				false,
 			)
+			if user, ok := test.broker.user.(*mockUser); ok {
+				if !user.deleteCalled {
+					t.Fatal("Delete() not called on user")
+				}
+			}
 			if err != nil {
 				t.Fatal(err)
 			}
