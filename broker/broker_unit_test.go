@@ -68,11 +68,18 @@ func (c mockCatalog) ListServicePlans() []ServicePlan {
 }
 
 type mockUser struct {
-	deletedUser        string
-	userAlreadyDeleted bool
-	accessKeys         []string
-	listAccessKeysErr  error
-	deletedAccessKeys  map[string][]string
+	deletedUser                 string
+	userAlreadyDeleted          bool
+	accessKeys                  []string
+	listAccessKeysErr           error
+	deletedAccessKeys           map[string][]string
+	deleteAccessKeyErr          error
+	attachedUserPolicies        []string
+	listAttachedUserPoliciesErr error
+	detachedPolicyArns          []string
+	detachUserPolicyErr         error
+	deletedPolicyArns           []string
+	deleteUserPolicyErr         error
 }
 
 func (u *mockUser) ListAccessKeys(userName string) ([]string, error) {
@@ -83,7 +90,10 @@ func (u *mockUser) ListAccessKeys(userName string) ([]string, error) {
 }
 
 func (u *mockUser) ListAttachedUserPolicies(userName, iamPath string) ([]string, error) {
-	return []string{}, nil
+	if u.listAttachedUserPoliciesErr != nil {
+		return []string{}, u.listAttachedUserPoliciesErr
+	}
+	return u.attachedUserPolicies, nil
 }
 
 func (u *mockUser) Delete(userName string) error {
@@ -111,6 +121,9 @@ func (u *mockUser) CreateAccessKey(userName string) (string, string, error) {
 }
 
 func (u *mockUser) DeleteAccessKey(userName, accessKeyID string) error {
+	if u.deleteAccessKeyErr != nil {
+		return u.deleteAccessKeyErr
+	}
 	if u.deletedAccessKeys == nil {
 		u.deletedAccessKeys = make(map[string][]string)
 	}
@@ -123,10 +136,18 @@ func (u *mockUser) CreatePolicy(policyName, iamPath, policyTemplate string, reso
 }
 
 func (u *mockUser) DeletePolicy(policyARN string) error {
+	if u.deleteUserPolicyErr != nil {
+		return u.deleteUserPolicyErr
+	}
+	u.deletedPolicyArns = append(u.deletedPolicyArns, policyARN)
 	return nil
 }
 
 func (u *mockUser) DetachUserPolicy(userName, policyARN string) error {
+	if u.detachUserPolicyErr != nil {
+		return u.detachUserPolicyErr
+	}
+	u.detachedPolicyArns = append(u.detachedPolicyArns, policyARN)
 	return nil
 }
 
@@ -254,6 +275,10 @@ func TestCreateBucket(t *testing.T) {
 func TestUnbind(t *testing.T) {
 	logger := lager.NewLogger("broker-unit-test")
 	listAccessKeysErr := errors.New("list access keys error")
+	deleteAccessKeyErr := errors.New("delete access key error")
+	listAttachedUserPoliciesErr := errors.New("listing user policies error")
+	detachUserPolicyErr := errors.New("detach user policy error")
+	deleteUserPolicyErr := errors.New("delete user policy error")
 
 	testCases := map[string]struct {
 		instanceId               string
@@ -263,6 +288,8 @@ func TestUnbind(t *testing.T) {
 		expectUserAlreadyDeleted bool
 		expectedErr              error
 		expectDeletedAccessKeys  map[string][]string
+		expectDetachedPolicyArns []string
+		expectDeletedPolicyArns  []string
 	}{
 		"success": {
 			instanceId:    "fake-instance-id",
@@ -313,6 +340,73 @@ func TestUnbind(t *testing.T) {
 				"prefix-binding-1": {"key1"},
 			},
 		},
+		"error deleting access key": {
+			instanceId:    "fake-instance-id",
+			bindingId:     "binding-1",
+			unbindDetails: domain.UnbindDetails{},
+			broker: &S3Broker{
+				logger: logger,
+				user: &mockUser{
+					accessKeys:         []string{"key1"},
+					deleteAccessKeyErr: deleteAccessKeyErr,
+				},
+				userPrefix: "prefix",
+			},
+			expectedErr: deleteAccessKeyErr,
+		},
+		"error listing user policies": {
+			instanceId:    "fake-instance-id",
+			bindingId:     "binding-1",
+			unbindDetails: domain.UnbindDetails{},
+			broker: &S3Broker{
+				logger: logger,
+				user: &mockUser{
+					listAttachedUserPoliciesErr: listAttachedUserPoliciesErr,
+				},
+				userPrefix: "prefix",
+			},
+			expectedErr: listAttachedUserPoliciesErr,
+		},
+		"error detaching user policy": {
+			instanceId:    "fake-instance-id",
+			bindingId:     "binding-1",
+			unbindDetails: domain.UnbindDetails{},
+			broker: &S3Broker{
+				logger: logger,
+				user: &mockUser{
+					attachedUserPolicies: []string{"policy1"},
+					detachUserPolicyErr:  detachUserPolicyErr,
+				},
+			},
+			expectedErr: detachUserPolicyErr,
+		},
+		"detaches policy successfully and errors deleting policy": {
+			instanceId:    "fake-instance-id",
+			bindingId:     "binding-1",
+			unbindDetails: domain.UnbindDetails{},
+			broker: &S3Broker{
+				logger: logger,
+				user: &mockUser{
+					attachedUserPolicies: []string{"policy1"},
+					deleteUserPolicyErr:  deleteUserPolicyErr,
+				},
+			},
+			expectedErr:              deleteUserPolicyErr,
+			expectDetachedPolicyArns: []string{"policy1"},
+		},
+		"detaches policy and deletes policy successfully": {
+			instanceId:    "fake-instance-id",
+			bindingId:     "binding-1",
+			unbindDetails: domain.UnbindDetails{},
+			broker: &S3Broker{
+				logger: logger,
+				user: &mockUser{
+					attachedUserPolicies: []string{"policy1"},
+				},
+			},
+			expectDetachedPolicyArns: []string{"policy1"},
+			expectDeletedPolicyArns:  []string{"policy1"},
+		},
 	}
 
 	for name, test := range testCases {
@@ -330,6 +424,12 @@ func TestUnbind(t *testing.T) {
 				}
 				if !cmp.Equal(test.expectDeletedAccessKeys, user.deletedAccessKeys) {
 					t.Fatalf(cmp.Diff(user.deletedAccessKeys, test.expectDeletedAccessKeys))
+				}
+				if !cmp.Equal(test.expectDetachedPolicyArns, user.detachedPolicyArns) {
+					t.Fatalf(cmp.Diff(user.detachedPolicyArns, test.expectDetachedPolicyArns))
+				}
+				if !cmp.Equal(test.expectDeletedPolicyArns, user.deletedPolicyArns) {
+					t.Fatalf(cmp.Diff(user.deletedPolicyArns, test.expectDeletedPolicyArns))
 				}
 			}
 			if err != test.expectedErr {
