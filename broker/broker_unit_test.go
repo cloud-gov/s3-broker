@@ -68,8 +68,9 @@ func (c mockCatalog) ListServicePlans() []ServicePlan {
 }
 
 type mockUser struct {
-	deletedUser  string
-	deleteCalled bool
+	deletedUser        string
+	deleteCalled       bool
+	userAlreadyDeleted bool
 }
 
 func (u *mockUser) ListAccessKeys(userName string) ([]string, error) {
@@ -83,6 +84,7 @@ func (u *mockUser) ListAttachedUserPolicies(userName, iamPath string) ([]string,
 func (u *mockUser) Delete(userName string) error {
 	u.deleteCalled = true
 	if userName == u.deletedUser {
+		u.userAlreadyDeleted = true
 		return awserr.New("NoSuchEntity", "no such user", errors.New("original error"))
 	}
 	return nil
@@ -245,10 +247,11 @@ func TestUnbind(t *testing.T) {
 	logger := lager.NewLogger("broker-unit-test")
 
 	testCases := map[string]struct {
-		instanceId    string
-		bindingId     string
-		unbindDetails domain.UnbindDetails
-		broker        *S3Broker
+		instanceId               string
+		bindingId                string
+		unbindDetails            domain.UnbindDetails
+		broker                   *S3Broker
+		expectUserAlreadyDeleted bool
 	}{
 		"success": {
 			instanceId:    "fake-instance-id",
@@ -270,6 +273,7 @@ func TestUnbind(t *testing.T) {
 				},
 				userPrefix: "test-user",
 			},
+			expectUserAlreadyDeleted: true,
 		},
 	}
 
@@ -285,6 +289,9 @@ func TestUnbind(t *testing.T) {
 			if user, ok := test.broker.user.(*mockUser); ok {
 				if !user.deleteCalled {
 					t.Fatal("Delete() not called on user")
+				}
+				if user.userAlreadyDeleted != test.expectUserAlreadyDeleted {
+					t.Fatalf(cmp.Diff(user.userAlreadyDeleted, test.expectUserAlreadyDeleted))
 				}
 			}
 			if err != nil {
