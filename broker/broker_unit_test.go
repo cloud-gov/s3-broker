@@ -72,6 +72,7 @@ type mockUser struct {
 	userAlreadyDeleted bool
 	accessKeys         []string
 	listAccessKeysErr  error
+	deletedAccessKeys  map[string][]string
 }
 
 func (u *mockUser) ListAccessKeys(userName string) ([]string, error) {
@@ -110,6 +111,10 @@ func (u *mockUser) CreateAccessKey(userName string) (string, string, error) {
 }
 
 func (u *mockUser) DeleteAccessKey(userName, accessKeyID string) error {
+	if u.deletedAccessKeys == nil {
+		u.deletedAccessKeys = make(map[string][]string)
+	}
+	u.deletedAccessKeys[userName] = append(u.deletedAccessKeys[userName], accessKeyID)
 	return nil
 }
 
@@ -257,6 +262,7 @@ func TestUnbind(t *testing.T) {
 		broker                   *S3Broker
 		expectUserAlreadyDeleted bool
 		expectedErr              error
+		expectDeletedAccessKeys  map[string][]string
 	}{
 		"success": {
 			instanceId:    "fake-instance-id",
@@ -292,6 +298,21 @@ func TestUnbind(t *testing.T) {
 			},
 			expectedErr: listAccessKeysErr,
 		},
+		"deletes access keys": {
+			instanceId:    "fake-instance-id",
+			bindingId:     "binding-1",
+			unbindDetails: domain.UnbindDetails{},
+			broker: &S3Broker{
+				logger: logger,
+				user: &mockUser{
+					accessKeys: []string{"key1"},
+				},
+				userPrefix: "prefix",
+			},
+			expectDeletedAccessKeys: map[string][]string{
+				"prefix-binding-1": {"key1"},
+			},
+		},
 	}
 
 	for name, test := range testCases {
@@ -306,6 +327,9 @@ func TestUnbind(t *testing.T) {
 			if user, ok := test.broker.user.(*mockUser); ok {
 				if user.userAlreadyDeleted != test.expectUserAlreadyDeleted {
 					t.Fatalf(cmp.Diff(user.userAlreadyDeleted, test.expectUserAlreadyDeleted))
+				}
+				if !cmp.Equal(test.expectDeletedAccessKeys, user.deletedAccessKeys) {
+					t.Fatalf(cmp.Diff(user.deletedAccessKeys, test.expectDeletedAccessKeys))
 				}
 			}
 			if err != test.expectedErr {
