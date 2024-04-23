@@ -70,6 +70,7 @@ func (c mockCatalog) ListServicePlans() []ServicePlan {
 type mockUser struct {
 	deletedUser                 string
 	userAlreadyDeleted          bool
+	deleteUserErr               error
 	accessKeys                  []string
 	listAccessKeysErr           error
 	deletedAccessKeys           map[string][]string
@@ -97,6 +98,9 @@ func (u *mockUser) ListAttachedUserPolicies(userName, iamPath string) ([]string,
 }
 
 func (u *mockUser) Delete(userName string) error {
+	if u.deleteUserErr != nil {
+		return u.deleteUserErr
+	}
 	if userName == u.deletedUser {
 		u.userAlreadyDeleted = true
 		return awserr.New("NoSuchEntity", "no such user", errors.New("original error"))
@@ -279,6 +283,7 @@ func TestUnbind(t *testing.T) {
 	listAttachedUserPoliciesErr := errors.New("listing user policies error")
 	detachUserPolicyErr := errors.New("detach user policy error")
 	deleteUserPolicyErr := errors.New("delete user policy error")
+	deleteUserErr := errors.New("delete user error")
 
 	testCases := map[string]struct {
 		instanceId               string
@@ -315,6 +320,19 @@ func TestUnbind(t *testing.T) {
 			},
 			expectUserAlreadyDeleted: true,
 			expectUnbindSpec:         domain.UnbindSpec{},
+		},
+		"unexpected error deleting user": {
+			instanceId:    "fake-instance-id",
+			bindingId:     "deleted-1",
+			unbindDetails: domain.UnbindDetails{},
+			broker: &S3Broker{
+				logger: logger,
+				user: &mockUser{
+					deleteUserErr: deleteUserErr,
+				},
+			},
+			expectUnbindSpec: domain.UnbindSpec{},
+			expectedErr:      deleteUserErr,
 		},
 		"error listing access keys": {
 			instanceId:    "fake-instance-id",
