@@ -470,16 +470,12 @@ func (b *S3Broker) Unbind(
 	if err := b.user.Delete(userName); err != nil {
 		// Do not return error if user was already deleted
 		if awserr, ok := err.(awserr.Error); ok && awserr.Code() == iam.ErrCodeNoSuchEntityException {
-			return domain.UnbindSpec{
-				IsAsync: false,
-			}, nil
+			return domain.UnbindSpec{}, nil
 		}
 		return domain.UnbindSpec{}, err
 	}
 
-	return domain.UnbindSpec{
-		IsAsync: false,
-	}, nil
+	return domain.UnbindSpec{}, nil
 }
 
 func (b *S3Broker) LastOperation(

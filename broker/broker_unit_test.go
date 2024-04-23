@@ -300,7 +300,7 @@ func TestUnbind(t *testing.T) {
 				logger: logger,
 				user:   &mockUser{},
 			},
-			expectUnbindSpec: domain.UnbindSpec{IsAsync: false},
+			expectUnbindSpec: domain.UnbindSpec{},
 		},
 		"user was already deleted": {
 			instanceId:    "fake-instance-id",
@@ -314,7 +314,7 @@ func TestUnbind(t *testing.T) {
 				userPrefix: "test-user",
 			},
 			expectUserAlreadyDeleted: true,
-			expectUnbindSpec:         domain.UnbindSpec{IsAsync: false},
+			expectUnbindSpec:         domain.UnbindSpec{},
 		},
 		"error listing access keys": {
 			instanceId:    "fake-instance-id",
