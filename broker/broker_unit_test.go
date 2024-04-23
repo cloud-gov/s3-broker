@@ -309,7 +309,7 @@ func TestUnbind(t *testing.T) {
 				}
 			}
 			if err != test.expectedErr {
-				t.Fatalf(cmp.Diff(err, test.expectedErr))
+				t.Fatalf("expected error: %s, got: %s", test.expectedErr, err)
 			}
 		})
 	}
