@@ -8,6 +8,8 @@ import (
 	"net/url"
 
 	"code.cloudfoundry.org/lager/v3"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/s3"
 	cf "github.com/cloudfoundry-community/go-cfclient/v3/client"
 	"github.com/pivotal-cf/brokerapi/v10"
@@ -426,7 +428,8 @@ func (b *S3Broker) Bind(
 
 func (b *S3Broker) Unbind(
 	context context.Context,
-	instanceID, bindingID string,
+	instanceID,
+	bindingID string,
 	details domain.UnbindDetails,
 	asyncAllowed bool,
 ) (domain.UnbindSpec, error) {
@@ -436,24 +439,26 @@ func (b *S3Broker) Unbind(
 		detailsLogKey:    details,
 	})
 
-	accessKeys, err := b.user.ListAccessKeys(b.userName(bindingID))
+	userName := b.userName(bindingID)
+
+	accessKeys, err := b.user.ListAccessKeys(userName)
 	if err != nil {
 		return domain.UnbindSpec{}, err
 	}
 
 	for _, accessKey := range accessKeys {
-		if err := b.user.DeleteAccessKey(b.userName(bindingID), accessKey); err != nil {
+		if err := b.user.DeleteAccessKey(userName, accessKey); err != nil {
 			return domain.UnbindSpec{}, err
 		}
 	}
 
-	userPolicies, err := b.user.ListAttachedUserPolicies(b.userName(bindingID), b.iamPath)
+	userPolicies, err := b.user.ListAttachedUserPolicies(userName, b.iamPath)
 	if err != nil {
 		return domain.UnbindSpec{}, err
 	}
 
 	for _, userPolicy := range userPolicies {
-		if err := b.user.DetachUserPolicy(b.userName(bindingID), userPolicy); err != nil {
+		if err := b.user.DetachUserPolicy(userName, userPolicy); err != nil {
 			return domain.UnbindSpec{}, err
 		}
 
@@ -462,13 +467,15 @@ func (b *S3Broker) Unbind(
 		}
 	}
 
-	if err := b.user.Delete(b.userName(bindingID)); err != nil {
+	if err := b.user.Delete(userName); err != nil {
+		// Do not return error if user was already deleted
+		if awserr, ok := err.(awserr.Error); ok && awserr.Code() == iam.ErrCodeNoSuchEntityException {
+			return domain.UnbindSpec{}, nil
+		}
 		return domain.UnbindSpec{}, err
 	}
 
-	return domain.UnbindSpec{
-		IsAsync: false,
-	}, nil
+	return domain.UnbindSpec{}, nil
 }
 
 func (b *S3Broker) LastOperation(
