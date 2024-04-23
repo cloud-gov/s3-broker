@@ -443,7 +443,7 @@ func (b *S3Broker) Unbind(
 
 	accessKeys, err := b.user.ListAccessKeys(userName)
 	if err != nil {
-		return domain.UnbindSpec{}, err
+		return handleUnbindGetUserError(err)
 	}
 
 	for _, accessKey := range accessKeys {
@@ -454,7 +454,7 @@ func (b *S3Broker) Unbind(
 
 	userPolicies, err := b.user.ListAttachedUserPolicies(userName, b.iamPath)
 	if err != nil {
-		return domain.UnbindSpec{}, err
+		return handleUnbindGetUserError(err)
 	}
 
 	for _, userPolicy := range userPolicies {
@@ -468,11 +468,7 @@ func (b *S3Broker) Unbind(
 	}
 
 	if err := b.user.Delete(userName); err != nil {
-		// Do not return error if user was already deleted
-		if awserr, ok := err.(awserr.Error); ok && awserr.Code() == iam.ErrCodeNoSuchEntityException {
-			return domain.UnbindSpec{}, nil
-		}
-		return domain.UnbindSpec{}, err
+		return handleUnbindGetUserError(err)
 	}
 
 	return domain.UnbindSpec{}, nil
@@ -580,4 +576,12 @@ func (b *S3Broker) modifyBucket(instanceID string, servicePlan ServicePlan, upda
 func (b *S3Broker) bucketFromPlan(servicePlan ServicePlan) *awss3.BucketDetails {
 	bucketDetails := &awss3.BucketDetails{}
 	return bucketDetails
+}
+
+func handleUnbindGetUserError(err error) (domain.UnbindSpec, error) {
+	// Do not return error if user was already deleted
+	if awserr, ok := err.(awserr.Error); ok && awserr.Code() == iam.ErrCodeNoSuchEntityException {
+		return domain.UnbindSpec{}, nil
+	}
+	return domain.UnbindSpec{}, err
 }
