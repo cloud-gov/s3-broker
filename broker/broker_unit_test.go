@@ -290,6 +290,7 @@ func TestUnbind(t *testing.T) {
 		expectDeletedAccessKeys  map[string][]string
 		expectDetachedPolicyArns []string
 		expectDeletedPolicyArns  []string
+		expectUnbindSpec         domain.UnbindSpec
 	}{
 		"success": {
 			instanceId:    "fake-instance-id",
@@ -299,6 +300,7 @@ func TestUnbind(t *testing.T) {
 				logger: logger,
 				user:   &mockUser{},
 			},
+			expectUnbindSpec: domain.UnbindSpec{IsAsync: false},
 		},
 		"user was already deleted": {
 			instanceId:    "fake-instance-id",
@@ -312,6 +314,7 @@ func TestUnbind(t *testing.T) {
 				userPrefix: "test-user",
 			},
 			expectUserAlreadyDeleted: true,
+			expectUnbindSpec:         domain.UnbindSpec{IsAsync: false},
 		},
 		"error listing access keys": {
 			instanceId:    "fake-instance-id",
@@ -323,7 +326,8 @@ func TestUnbind(t *testing.T) {
 					listAccessKeysErr: listAccessKeysErr,
 				},
 			},
-			expectedErr: listAccessKeysErr,
+			expectedErr:      listAccessKeysErr,
+			expectUnbindSpec: domain.UnbindSpec{},
 		},
 		"deletes access keys": {
 			instanceId:    "fake-instance-id",
@@ -339,6 +343,7 @@ func TestUnbind(t *testing.T) {
 			expectDeletedAccessKeys: map[string][]string{
 				"prefix-binding-1": {"key1"},
 			},
+			expectUnbindSpec: domain.UnbindSpec{},
 		},
 		"error deleting access key": {
 			instanceId:    "fake-instance-id",
@@ -352,7 +357,8 @@ func TestUnbind(t *testing.T) {
 				},
 				userPrefix: "prefix",
 			},
-			expectedErr: deleteAccessKeyErr,
+			expectedErr:      deleteAccessKeyErr,
+			expectUnbindSpec: domain.UnbindSpec{},
 		},
 		"error listing user policies": {
 			instanceId:    "fake-instance-id",
@@ -365,7 +371,8 @@ func TestUnbind(t *testing.T) {
 				},
 				userPrefix: "prefix",
 			},
-			expectedErr: listAttachedUserPoliciesErr,
+			expectedErr:      listAttachedUserPoliciesErr,
+			expectUnbindSpec: domain.UnbindSpec{},
 		},
 		"error detaching user policy": {
 			instanceId:    "fake-instance-id",
@@ -378,7 +385,8 @@ func TestUnbind(t *testing.T) {
 					detachUserPolicyErr:  detachUserPolicyErr,
 				},
 			},
-			expectedErr: detachUserPolicyErr,
+			expectedErr:      detachUserPolicyErr,
+			expectUnbindSpec: domain.UnbindSpec{},
 		},
 		"detaches policy successfully and errors deleting policy": {
 			instanceId:    "fake-instance-id",
@@ -393,6 +401,7 @@ func TestUnbind(t *testing.T) {
 			},
 			expectedErr:              deleteUserPolicyErr,
 			expectDetachedPolicyArns: []string{"policy1"},
+			expectUnbindSpec:         domain.UnbindSpec{},
 		},
 		"detaches policy and deletes policy successfully": {
 			instanceId:    "fake-instance-id",
@@ -406,18 +415,22 @@ func TestUnbind(t *testing.T) {
 			},
 			expectDetachedPolicyArns: []string{"policy1"},
 			expectDeletedPolicyArns:  []string{"policy1"},
+			expectUnbindSpec:         domain.UnbindSpec{},
 		},
 	}
 
 	for name, test := range testCases {
 		t.Run(name, func(t *testing.T) {
-			_, err := test.broker.Unbind(
+			unbindSpec, err := test.broker.Unbind(
 				context.Background(),
 				test.instanceId,
 				test.bindingId,
 				test.unbindDetails,
 				false,
 			)
+			if !cmp.Equal(test.expectUnbindSpec, unbindSpec) {
+				t.Fatalf(cmp.Diff(unbindSpec, test.expectUnbindSpec))
+			}
 			if user, ok := test.broker.user.(*mockUser); ok {
 				if user.userAlreadyDeleted != test.expectUserAlreadyDeleted {
 					t.Fatalf(cmp.Diff(user.userAlreadyDeleted, test.expectUserAlreadyDeleted))
