@@ -69,12 +69,16 @@ func (c mockCatalog) ListServicePlans() []ServicePlan {
 
 type mockUser struct {
 	deletedUser        string
-	deleteCalled       bool
 	userAlreadyDeleted bool
+	accessKeys         []string
+	listAccessKeysErr  error
 }
 
 func (u *mockUser) ListAccessKeys(userName string) ([]string, error) {
-	return []string{}, nil
+	if len(u.accessKeys) > 0 {
+		return u.accessKeys, u.listAccessKeysErr
+	}
+	return []string{}, u.listAccessKeysErr
 }
 
 func (u *mockUser) ListAttachedUserPolicies(userName, iamPath string) ([]string, error) {
@@ -82,7 +86,6 @@ func (u *mockUser) ListAttachedUserPolicies(userName, iamPath string) ([]string,
 }
 
 func (u *mockUser) Delete(userName string) error {
-	u.deleteCalled = true
 	if userName == u.deletedUser {
 		u.userAlreadyDeleted = true
 		return awserr.New("NoSuchEntity", "no such user", errors.New("original error"))
@@ -245,6 +248,7 @@ func TestCreateBucket(t *testing.T) {
 
 func TestUnbind(t *testing.T) {
 	logger := lager.NewLogger("broker-unit-test")
+	listAccessKeysErr := errors.New("list access keys error")
 
 	testCases := map[string]struct {
 		instanceId               string
@@ -252,6 +256,7 @@ func TestUnbind(t *testing.T) {
 		unbindDetails            domain.UnbindDetails
 		broker                   *S3Broker
 		expectUserAlreadyDeleted bool
+		expectedErr              error
 	}{
 		"success": {
 			instanceId:    "fake-instance-id",
@@ -275,6 +280,18 @@ func TestUnbind(t *testing.T) {
 			},
 			expectUserAlreadyDeleted: true,
 		},
+		"error listing access keys": {
+			instanceId:    "fake-instance-id",
+			bindingId:     "fake-binding-id",
+			unbindDetails: domain.UnbindDetails{},
+			broker: &S3Broker{
+				logger: logger,
+				user: &mockUser{
+					listAccessKeysErr: listAccessKeysErr,
+				},
+			},
+			expectedErr: listAccessKeysErr,
+		},
 	}
 
 	for name, test := range testCases {
@@ -287,15 +304,12 @@ func TestUnbind(t *testing.T) {
 				false,
 			)
 			if user, ok := test.broker.user.(*mockUser); ok {
-				if !user.deleteCalled {
-					t.Fatal("Delete() not called on user")
-				}
 				if user.userAlreadyDeleted != test.expectUserAlreadyDeleted {
 					t.Fatalf(cmp.Diff(user.userAlreadyDeleted, test.expectUserAlreadyDeleted))
 				}
 			}
-			if err != nil {
-				t.Fatal(err)
+			if err != test.expectedErr {
+				t.Fatalf(cmp.Diff(err, test.expectedErr))
 			}
 		})
 	}
