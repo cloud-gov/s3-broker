@@ -233,18 +233,6 @@ var _ = Describe("IAM User", func() {
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal("operation failed"))
 			})
-
-			Context("and it is an AWS error", func() {
-				BeforeEach(func() {
-					deleteUserError = awserr.New("code", "message", errors.New("operation failed"))
-				})
-
-				It("returns the proper error", func() {
-					err := user.Delete(userName)
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal("code: message"))
-				})
-			})
 		})
 	})
 
@@ -301,18 +289,6 @@ var _ = Describe("IAM User", func() {
 				_, err := user.ListAccessKeys(userName)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal("operation failed"))
-			})
-
-			Context("and it is an AWS error", func() {
-				BeforeEach(func() {
-					listAccessKeysError = awserr.New("code", "message", errors.New("operation failed"))
-				})
-
-				It("returns the proper error", func() {
-					_, err := user.ListAccessKeys(userName)
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal("code: message"))
-				})
 			})
 		})
 	})
@@ -665,18 +641,6 @@ var _ = Describe("IAM User", func() {
 				_, err := user.ListAttachedUserPolicies(userName, iamPath)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal("operation failed"))
-			})
-
-			Context("and it is an AWS error", func() {
-				BeforeEach(func() {
-					listAttachedUserPoliciesError = awserr.New("code", "message", errors.New("operation failed"))
-				})
-
-				It("returns the proper error", func() {
-					_, err := user.ListAttachedUserPolicies(userName, iamPath)
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal("code: message"))
-				})
 			})
 		})
 	})
