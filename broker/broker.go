@@ -442,8 +442,8 @@ func (b *S3Broker) Unbind(
 	userName := b.userName(bindingID)
 
 	accessKeys, err := b.user.ListAccessKeys(userName)
-	if err != nil {
-		return handleUnbindGetUserError(err)
+	if b.handleUnbindError(err) != nil {
+		return domain.UnbindSpec{}, err
 	}
 
 	for _, accessKey := range accessKeys {
@@ -453,8 +453,8 @@ func (b *S3Broker) Unbind(
 	}
 
 	userPolicies, err := b.user.ListAttachedUserPolicies(userName, b.iamPath)
-	if err != nil {
-		return handleUnbindGetUserError(err)
+	if b.handleUnbindError(err) != nil {
+		return domain.UnbindSpec{}, err
 	}
 
 	for _, userPolicy := range userPolicies {
@@ -467,8 +467,8 @@ func (b *S3Broker) Unbind(
 		}
 	}
 
-	if err := b.user.Delete(userName); err != nil {
-		return handleUnbindGetUserError(err)
+	if err := b.user.Delete(userName); b.handleUnbindError(err) != nil {
+		return domain.UnbindSpec{}, err
 	}
 
 	return domain.UnbindSpec{}, nil
@@ -578,10 +578,18 @@ func (b *S3Broker) bucketFromPlan(servicePlan ServicePlan) *awss3.BucketDetails 
 	return bucketDetails
 }
 
-func handleUnbindGetUserError(err error) (domain.UnbindSpec, error) {
+func (b *S3Broker) handleUnbindError(err error) error {
 	// Do not return error if user was already deleted
-	if awserr, ok := err.(awserr.Error); ok && awserr.Code() == iam.ErrCodeNoSuchEntityException {
-		return domain.UnbindSpec{}, nil
+	if awserr, ok := err.(awserr.Error); ok {
+		switch awserr.Code() {
+		case iam.ErrCodeNoSuchEntityException:
+			b.logger.Debug("handleUnbindError", map[string]interface{}{
+				"message": "Not returning NoSuchEntity error when unbinding user",
+			})
+			return nil
+		default:
+			return err
+		}
 	}
-	return domain.UnbindSpec{}, err
+	return err
 }

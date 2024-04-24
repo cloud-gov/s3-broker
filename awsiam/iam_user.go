@@ -87,9 +87,9 @@ func (i *IAMUser) Delete(userName string) error {
 	deleteUserOutput, err := i.iamsvc.DeleteUser(deleteUserInput)
 	if err != nil {
 		i.logger.Error("aws-iam-error", err)
-		if awsErr, ok := err.(awserr.Error); ok {
-			return errors.New(awsErr.Code() + ": " + awsErr.Message())
-		}
+		// if awsErr, ok := err.(awserr.Error); ok {
+		// 	return errors.New(awsErr.Code() + ": " + awsErr.Message())
+		// }
 		return err
 	}
 	i.logger.Debug("delete-user", lager.Data{"output": deleteUserOutput})
@@ -108,9 +108,6 @@ func (i *IAMUser) ListAccessKeys(userName string) ([]string, error) {
 	listAccessKeysOutput, err := i.iamsvc.ListAccessKeys(listAccessKeysInput)
 	if err != nil {
 		i.logger.Error("aws-iam-error", err)
-		if awsErr, ok := err.(awserr.Error); ok {
-			return accessKeys, errors.New(awsErr.Code() + ": " + awsErr.Message())
-		}
 		return accessKeys, err
 	}
 	i.logger.Debug("list-access-keys", lager.Data{"output": listAccessKeysOutput})
@@ -243,9 +240,9 @@ func (i *IAMUser) ListAttachedUserPolicies(userName, iamPath string) ([]string, 
 	listAttachedUserPoliciesOutput, err := i.iamsvc.ListAttachedUserPolicies(listAttachedUserPoliciesInput)
 	if err != nil {
 		i.logger.Error("aws-iam-error", err)
-		if awsErr, ok := err.(awserr.Error); ok {
-			return userPolicies, errors.New(awsErr.Code() + ": " + awsErr.Message())
-		}
+		// if awsErr, ok := err.(awserr.Error); ok {
+		// 	return userPolicies, errors.New(awsErr.Code() + ": " + awsErr.Message())
+		// }
 		return userPolicies, err
 	}
 	i.logger.Debug("list-attached-user-policies", lager.Data{"output": listAttachedUserPoliciesOutput})
