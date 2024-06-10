@@ -2,7 +2,10 @@ package broker
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"slices"
 	"testing"
 
 	"code.cloudfoundry.org/lager/v3"
@@ -12,6 +15,7 @@ import (
 	"github.com/cloud-gov/s3-broker/awsiam"
 	"github.com/cloud-gov/s3-broker/awss3"
 	"github.com/google/go-cmp/cmp"
+
 	"github.com/pivotal-cf/brokerapi/v10"
 	"github.com/pivotal-cf/brokerapi/v10/domain"
 )
@@ -41,9 +45,39 @@ func (mt *mockTagGenerator) GenerateTags(
 	return mt.tags, nil
 }
 
+type mockBucket struct {
+	name string
+	arn  string
+
+	describeDetails awss3.BucketDetails
+	describeErr     error
+}
+
+func (b mockBucket) Describe(bucketname, partition string) (awss3.BucketDetails, error) {
+	if b.describeErr != nil {
+		return awss3.BucketDetails{}, b.describeErr
+	}
+	return b.describeDetails, nil
+}
+
+func (b mockBucket) Create(bucketName string, details awss3.BucketDetails) (string, error) {
+	return "", errors.New("not implemented")
+	// b.name = bucketName
+	// b.arn = "aws:" + bucketName
+	// return
+}
+
+func (b mockBucket) Modify(bucketName string, details awss3.BucketDetails) error {
+	return errors.New("not implemented")
+}
+
+func (b mockBucket) Delete(bucketName string, deleteObjects bool) error {
+	return errors.New("not implemented")
+}
+
 type mockCatalog struct {
-	serviceName   string
-	getServiceErr error
+	serviceName string
+	planName    string
 }
 
 func (c mockCatalog) Validate() error {
@@ -60,7 +94,12 @@ func (c mockCatalog) FindService(serviceID string) (service Service, found bool)
 }
 
 func (c mockCatalog) FindServicePlan(planID string) (plan ServicePlan, found bool) {
-	return ServicePlan{}, false
+	if c.planName == "" {
+		return ServicePlan{}, false
+	}
+	return ServicePlan{
+		Name: c.planName,
+	}, true
 }
 
 func (c mockCatalog) ListServicePlans() []ServicePlan {
@@ -68,24 +107,43 @@ func (c mockCatalog) ListServicePlans() []ServicePlan {
 }
 
 type mockUser struct {
-	deleteUserErr               error
-	accessKeys                  []string
-	listAccessKeysErr           error
-	deletedAccessKeys           map[string][]string
+	// In-memory state for tests.
+
+	// accessKeys maps from usernames to lists of access key IDs. Note that a
+	// new username is created for every binding, not every bucket.
+	accessKeys           map[string][]string
+	attachedUserPolicies []string
+	deletedPolicyArns    []string
+	detachedPolicyArns   []string
+	exists               bool
+	policies             []string // ARNs
+	users                []string
+
+	// Methods return these errors when set.
+	attachUserPolicyErr         error
+	createAccessKeyErr          error
+	createPolicyErr             error
+	createUserErr               error
 	deleteAccessKeyErr          error
-	attachedUserPolicies        []string
-	listAttachedUserPoliciesErr error
-	detachedPolicyArns          []string
-	detachUserPolicyErr         error
-	deletedPolicyArns           []string
+	deleteUserErr               error
 	deleteUserPolicyErr         error
+	detachUserPolicyErr         error
+	listAccessKeysErr           error
+	listAttachedUserPoliciesErr error
 }
 
 func (u *mockUser) ListAccessKeys(userName string) ([]string, error) {
-	if len(u.accessKeys) > 0 {
-		return u.accessKeys, u.listAccessKeysErr
+	if u.listAccessKeysErr != nil {
+		return []string{}, u.listAccessKeysErr
 	}
-	return []string{}, u.listAccessKeysErr
+	if u.accessKeys == nil {
+		return []string{}, u.listAccessKeysErr
+	}
+	// Make ranging over the return value safe against changes to the slice,
+	// like deletes.
+	var out = make([]string, len(u.accessKeys[userName]))
+	copy(out, u.accessKeys[userName])
+	return out, nil
 }
 
 func (u *mockUser) ListAttachedUserPolicies(userName, iamPath string) ([]string, error) {
@@ -99,10 +157,18 @@ func (u *mockUser) Delete(userName string) error {
 	if u.deleteUserErr != nil {
 		return u.deleteUserErr
 	}
+	u.exists = false
 	return nil
 }
 
 func (u *mockUser) AttachUserPolicy(userName, policyARN string) error {
+	if u.attachUserPolicyErr != nil {
+		return u.attachUserPolicyErr
+	}
+	if u.attachedUserPolicies == nil {
+		u.attachedUserPolicies = []string{}
+	}
+	u.attachedUserPolicies = append(u.attachedUserPolicies, policyARN)
 	return nil
 }
 
@@ -111,33 +177,66 @@ func (u *mockUser) Describe(userName string) (awsiam.UserDetails, error) {
 }
 
 func (u *mockUser) Create(userName, iamPath string, iamTags []*iam.Tag) (string, error) {
+	if u.createUserErr != nil {
+		return "", u.createUserErr
+	}
+	u.exists = true
 	return "", nil
 }
 
 func (u *mockUser) CreateAccessKey(userName string) (string, string, error) {
-	return "", "", nil
+	if u.createAccessKeyErr != nil {
+		return "", "", u.createAccessKeyErr
+	}
+	if u.accessKeys == nil {
+		u.accessKeys = make(map[string][]string)
+	}
+	keyID := fmt.Sprintf("%v-%v", userName, len(u.accessKeys[userName]))
+	u.accessKeys[userName] = append(u.accessKeys[userName], keyID)
+
+	return keyID, "", nil
 }
 
 func (u *mockUser) DeleteAccessKey(userName, accessKeyID string) error {
 	if u.deleteAccessKeyErr != nil {
 		return u.deleteAccessKeyErr
 	}
-	if u.deletedAccessKeys == nil {
-		u.deletedAccessKeys = make(map[string][]string)
+	if u.accessKeys == nil || len(u.accessKeys[userName]) == 0 {
+		return errors.New("not found")
 	}
-	u.deletedAccessKeys[userName] = append(u.deletedAccessKeys[userName], accessKeyID)
+	keys := u.accessKeys[userName]
+	idx := slices.Index(keys, accessKeyID)
+	if idx == -1 {
+		return errors.New("not found")
+	}
+	u.accessKeys[userName] = slices.Delete(keys, idx, idx+1)
 	return nil
 }
 
 func (u *mockUser) CreatePolicy(policyName, iamPath, policyTemplate string, resources []string, iamTags []*iam.Tag) (string, error) {
-	return "", nil
+	if u.createPolicyErr != nil {
+		return "", u.createPolicyErr
+	}
+	if u.policies == nil {
+		u.policies = []string{}
+	}
+	u.policies = append(u.policies, policyName)
+	return policyName, nil
+
 }
 
 func (u *mockUser) DeletePolicy(policyARN string) error {
 	if u.deleteUserPolicyErr != nil {
 		return u.deleteUserPolicyErr
 	}
-	u.deletedPolicyArns = append(u.deletedPolicyArns, policyARN)
+	if u.policies == nil || len(u.policies) == 0 {
+		return errors.New("not found")
+	}
+	idx := slices.Index(u.policies, policyARN)
+	if idx == -1 {
+		return errors.New("not found")
+	}
+	u.policies = slices.Delete(u.policies, idx, idx+1)
 	return nil
 }
 
@@ -271,7 +370,7 @@ func TestCreateBucket(t *testing.T) {
 }
 
 func TestUnbind(t *testing.T) {
-	logger := lager.NewLogger("broker-unit-test")
+	logger := lager.NewLogger("broker-unit-test-TestUnbind")
 	listAccessKeysErr := errors.New("list access keys error")
 	deleteAccessKeyErr := errors.New("delete access key error")
 	listAttachedUserPoliciesErr := errors.New("listing user policies error")
@@ -286,9 +385,9 @@ func TestUnbind(t *testing.T) {
 		unbindDetails            domain.UnbindDetails
 		broker                   *S3Broker
 		expectedErr              error
-		expectDeletedAccessKeys  map[string][]string
+		expectAccessKeys         map[string][]string
 		expectDetachedPolicyArns []string
-		expectDeletedPolicyArns  []string
+		expectPolicyARNs         []string
 		expectUnbindSpec         domain.UnbindSpec
 	}{
 		"success": {
@@ -359,13 +458,13 @@ func TestUnbind(t *testing.T) {
 			broker: &S3Broker{
 				logger: logger,
 				user: &mockUser{
-					accessKeys: []string{"key1"},
+					accessKeys: map[string][]string{
+						"prefix-binding-1": {"key1", "key2"},
+					},
 				},
 				userPrefix: "prefix",
 			},
-			expectDeletedAccessKeys: map[string][]string{
-				"prefix-binding-1": {"key1"},
-			},
+			expectAccessKeys: map[string][]string{"prefix-binding-1": {}},
 			expectUnbindSpec: domain.UnbindSpec{},
 		},
 		"error deleting access key": {
@@ -375,12 +474,17 @@ func TestUnbind(t *testing.T) {
 			broker: &S3Broker{
 				logger: logger,
 				user: &mockUser{
-					accessKeys:         []string{"key1"},
+					accessKeys: map[string][]string{
+						"prefix-binding-1": {"key1"},
+					},
 					deleteAccessKeyErr: deleteAccessKeyErr,
 				},
 				userPrefix: "prefix",
 			},
-			expectedErr:      deleteAccessKeyErr,
+			expectedErr: deleteAccessKeyErr,
+			expectAccessKeys: map[string][]string{
+				"prefix-binding-1": {"key1"},
+			},
 			expectUnbindSpec: domain.UnbindSpec{},
 		},
 		"error listing user policies": {
@@ -446,10 +550,11 @@ func TestUnbind(t *testing.T) {
 				logger: logger,
 				user: &mockUser{
 					attachedUserPolicies: []string{"policy1"},
+					policies:             []string{"policy1"},
 				},
 			},
 			expectDetachedPolicyArns: []string{"policy1"},
-			expectDeletedPolicyArns:  []string{"policy1"},
+			expectPolicyARNs:         []string{},
 			expectUnbindSpec:         domain.UnbindSpec{},
 		},
 	}
@@ -467,18 +572,278 @@ func TestUnbind(t *testing.T) {
 				t.Fatalf(cmp.Diff(unbindSpec, test.expectUnbindSpec))
 			}
 			if user, ok := test.broker.user.(*mockUser); ok {
-				if !cmp.Equal(test.expectDeletedAccessKeys, user.deletedAccessKeys) {
-					t.Fatalf(cmp.Diff(user.deletedAccessKeys, test.expectDeletedAccessKeys))
+				if !cmp.Equal(test.expectAccessKeys, user.accessKeys) {
+					t.Fatalf(cmp.Diff(user.accessKeys, test.expectAccessKeys))
 				}
 				if !cmp.Equal(test.expectDetachedPolicyArns, user.detachedPolicyArns) {
 					t.Fatalf(cmp.Diff(user.detachedPolicyArns, test.expectDetachedPolicyArns))
 				}
-				if !cmp.Equal(test.expectDeletedPolicyArns, user.deletedPolicyArns) {
-					t.Fatalf(cmp.Diff(user.deletedPolicyArns, test.expectDeletedPolicyArns))
+				if !cmp.Equal(test.expectPolicyARNs, user.policies) {
+					t.Fatalf(cmp.Diff(user.policies, test.expectPolicyARNs))
 				}
 			}
 			if err != test.expectedErr {
 				t.Fatalf("expected error: %s, got: %s", test.expectedErr, err)
+			}
+		})
+	}
+}
+
+// testErr is for checking errors returned by functions under test. Call NewTestErr with
+// the desired error message, and call errors.Is(expected, actual) to compare the messages.
+type testErr struct {
+	msg string
+}
+
+func (e testErr) Error() string {
+	return e.msg
+}
+
+func (e testErr) Is(target error) bool {
+	return target.Error() == e.msg
+}
+
+func NewTestErr(msg string) error {
+	return testErr{
+		msg: msg,
+	}
+}
+
+type MockProvider struct{}
+
+func (p *MockProvider) Endpoint() string {
+	return ""
+}
+
+func TestBind(t *testing.T) {
+	logger := lager.NewLogger("broker-unit-test-TestBind")
+
+	testCases := map[string]struct {
+		// inputs
+		instanceId  string
+		bindingId   string
+		bindDetails domain.BindDetails
+
+		// state
+		broker *S3Broker
+
+		// outputs
+		expectBinding domain.Binding
+		expectErr     error
+
+		// side effects
+		expectUserExists         bool
+		expectUser               mockUser // todo dedup with above
+		expectAccessKeys         map[string][]string
+		expectPolicies           []string
+		expectAttachedPolicyArns []string
+	}{
+		"malformed bind parameters": {
+			instanceId: "instance1",
+			bindingId:  "binding1",
+			bindDetails: domain.BindDetails{
+				RawParameters: json.RawMessage("{"),
+			},
+			broker: &S3Broker{
+				logger: logger,
+			},
+			expectBinding: domain.Binding{},
+			expectErr:     NewTestErr("unexpected end of JSON input"),
+		},
+		"missing service plan": {
+			instanceId: "instance1",
+			bindingId:  "binding1",
+			bindDetails: domain.BindDetails{
+				PlanID: "plan1",
+			},
+			broker: &S3Broker{
+				logger:  logger,
+				catalog: &mockCatalog{},
+			},
+			expectBinding: domain.Binding{},
+			expectErr:     NewTestErr("Service Plan 'plan1' not found"),
+		},
+		"missing service": {
+			instanceId: "instance1",
+			bindingId:  "binding1",
+			bindDetails: domain.BindDetails{
+				PlanID:    "plan1",
+				ServiceID: "service1",
+			},
+			broker: &S3Broker{
+				logger: logger,
+				catalog: &mockCatalog{
+					planName: "plan1",
+				},
+			},
+			expectBinding: domain.Binding{},
+			expectErr:     NewTestErr("Service 'service1' not found"),
+		},
+		"failed to create user": {
+			instanceId: "instance1",
+			bindingId:  "binding1",
+			bindDetails: domain.BindDetails{
+				PlanID:    "planid1",
+				ServiceID: "serviceid1",
+			},
+			broker: &S3Broker{
+				logger: logger,
+				bucket: &mockBucket{
+					describeDetails: awss3.BucketDetails{},
+				},
+				catalog: &mockCatalog{
+					planName:    "plan1",
+					serviceName: "service1",
+				},
+				tagManager: &mockTagGenerator{},
+				user: &mockUser{
+					createUserErr: NewTestErr("error creating user"),
+				},
+			},
+			expectBinding:    domain.Binding{},
+			expectErr:        NewTestErr("error creating user"),
+			expectUserExists: false,
+		},
+		"failed to create access key": {
+			instanceId: "instance1",
+			bindingId:  "binding1",
+			bindDetails: domain.BindDetails{
+				PlanID:    "planid1",
+				ServiceID: "serviceid1",
+			},
+			broker: &S3Broker{
+				logger: logger,
+				bucket: &mockBucket{
+					describeDetails: awss3.BucketDetails{},
+				},
+				catalog: &mockCatalog{
+					planName:    "plan1",
+					serviceName: "service1",
+				},
+				tagManager: &mockTagGenerator{},
+				user: &mockUser{
+					createAccessKeyErr: NewTestErr("error creating access key"),
+				},
+			},
+			expectBinding:    domain.Binding{},
+			expectErr:        NewTestErr("error creating access key"),
+			expectUserExists: false,
+		},
+		"failed to create policy": {
+			instanceId: "instance1",
+			bindingId:  "binding1",
+			bindDetails: domain.BindDetails{
+				PlanID:    "planid1",
+				ServiceID: "serviceid1",
+			},
+			broker: &S3Broker{
+				logger: logger,
+				bucket: &mockBucket{
+					describeDetails: awss3.BucketDetails{},
+				},
+				bucketPrefix: "test",
+				catalog: &mockCatalog{
+					planName:    "plan1",
+					serviceName: "service1",
+				},
+				provider:   &MockProvider{},
+				tagManager: &mockTagGenerator{},
+				user: &mockUser{
+					createPolicyErr: NewTestErr("error creating policy"),
+				},
+			},
+			expectAccessKeys: map[string][]string{"-binding1": {}},
+			expectBinding:    domain.Binding{},
+			expectErr:        NewTestErr("error creating policy"),
+			expectUserExists: false,
+			expectPolicies:   nil,
+		},
+		"failed to attach policy": {
+			instanceId: "instance1",
+			bindingId:  "binding1",
+			bindDetails: domain.BindDetails{
+				PlanID:    "planid1",
+				ServiceID: "serviceid1",
+			},
+			broker: &S3Broker{
+				logger: logger,
+				bucket: &mockBucket{
+					describeDetails: awss3.BucketDetails{},
+				},
+				bucketPrefix: "test",
+				catalog: &mockCatalog{
+					planName:    "plan1",
+					serviceName: "service1",
+				},
+				provider:   &MockProvider{},
+				tagManager: &mockTagGenerator{},
+				user: &mockUser{
+					attachUserPolicyErr: NewTestErr("error attaching policy"),
+				},
+			},
+			expectAccessKeys: map[string][]string{"-binding1": {}},
+			expectBinding:    domain.Binding{},
+			expectErr:        NewTestErr("error attaching policy"),
+			expectUserExists: false,
+			expectPolicies:   []string{},
+		},
+		"success": {
+			instanceId: "instance1",
+			bindingId:  "binding1",
+			bindDetails: domain.BindDetails{
+				PlanID:    "planid1",
+				ServiceID: "serviceid1",
+			},
+			broker: &S3Broker{
+				logger: logger,
+				bucket: &mockBucket{
+					describeDetails: awss3.BucketDetails{},
+				},
+				bucketPrefix: "test",
+				catalog: &mockCatalog{
+					planName:    "plan1",
+					serviceName: "service1",
+				},
+				provider:   &MockProvider{},
+				tagManager: &mockTagGenerator{},
+				user:       &mockUser{},
+			},
+			expectAccessKeys: map[string][]string{"-binding1": {"-binding1-0"}},
+			expectBinding: domain.Binding{
+				Credentials: Credentials{
+					URI:               "s3://-binding1-0:@/",
+					AccessKeyID:       "-binding1-0",
+					AdditionalBuckets: []string{""},
+				},
+			},
+			expectUserExists: true,
+			expectPolicies:   []string{"-binding1"},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// act
+			binding, err := tc.broker.Bind(context.Background(), tc.instanceId, tc.bindingId, tc.bindDetails, false)
+
+			// assert: outputs
+			if !cmp.Equal(tc.expectBinding, binding) {
+				t.Fatalf(cmp.Diff(binding, tc.expectBinding))
+			}
+			if !errors.Is(tc.expectErr, err) {
+				t.Fatalf("expected err %s, got %s", tc.expectErr, err)
+			}
+
+			// assert: side effects
+			if user, ok := tc.broker.user.(*mockUser); ok {
+				if tc.expectUserExists != user.exists {
+					t.Fatalf(cmp.Diff(user.exists, tc.expectUserExists))
+				}
+				if !cmp.Equal(tc.expectAccessKeys, user.accessKeys) {
+					t.Fatalf(cmp.Diff(user.accessKeys, tc.expectAccessKeys))
+				}
+				if !cmp.Equal(tc.expectPolicies, user.policies) {
+					t.Fatalf(cmp.Diff(user.policies, tc.expectPolicies))
+				}
 			}
 		})
 	}

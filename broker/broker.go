@@ -300,7 +300,6 @@ func (b *S3Broker) Bind(
 		bindingIDLogKey:  bindingID,
 		detailsLogKey:    details,
 	})
-
 	binding := domain.Binding{}
 
 	var accessKeyID, secretAccessKey string
@@ -353,12 +352,19 @@ func (b *S3Broker) Bind(
 	detailc, errc := make(chan awss3.BucketDetails), make(chan error)
 	for _, bucketName := range bucketNames {
 		go func(bucketName string) {
+			b.logger.Debug("bind: goroutine: describe bucket", lager.Data{
+				instanceIDLogKey: instanceID,
+				bindingIDLogKey:  bindingID,
+				detailsLogKey:    details,
+				"bucketname":     bucketName,
+			})
 			bucketDetails, err := b.bucket.Describe(bucketName, b.awsPartition)
 			if err != nil {
 				if err == awss3.ErrBucketDoesNotExist {
 					errc <- apiresponses.ErrInstanceDoesNotExist
+				} else {
+					errc <- err
 				}
-				errc <- err
 			} else {
 				detailc <- bucketDetails
 			}
@@ -383,24 +389,66 @@ func (b *S3Broker) Bind(
 	}
 
 	if _, err = b.user.Create(b.userName(bindingID), b.iamPath, iamTags); err != nil {
+		b.logger.Error("bind: error creating user", err, lager.Data{
+			instanceIDLogKey: instanceID,
+			bindingIDLogKey:  bindingID,
+			detailsLogKey:    details,
+			"user":           b.userName(bindingID),
+		})
 		return binding, err
 	}
+
 	defer func() {
+		// If the function returns an error, Bind did not complete and resources must be cleaned up.
 		if err != nil {
-			if policyARN != "" {
-				b.user.DeletePolicy(policyARN)
+			b.logger.Info("bind: defer: err was not nil on return; deleting user", lager.Data{
+				instanceIDLogKey: instanceID,
+				bindingIDLogKey:  bindingID,
+				detailsLogKey:    details,
+			})
+
+			// Careful: Do not shadow err, or future defers will not work.
+			if derr := b.user.Delete(b.userName(bindingID)); derr != nil {
+				b.logger.Error("bind: defer: error deleting user", derr, lager.Data{
+					instanceIDLogKey: instanceID,
+					bindingIDLogKey:  bindingID,
+					detailsLogKey:    details,
+					"user":           b.userName(bindingID),
+				})
 			}
-			if accessKeyID != "" {
-				b.user.DeleteAccessKey(b.userName(bindingID), accessKeyID)
-			}
-			b.user.Delete(b.userName(bindingID))
 		}
 	}()
 
 	accessKeyID, secretAccessKey, err = b.user.CreateAccessKey(b.userName(bindingID))
 	if err != nil {
+		b.logger.Error("bind: error creating access key", err, lager.Data{
+			instanceIDLogKey: instanceID,
+			bindingIDLogKey:  bindingID,
+			detailsLogKey:    details,
+			"user":           b.userName(bindingID),
+		})
 		return binding, err
 	}
+	defer func() {
+		// If the function returns an error, Bind did not complete and resources must be cleaned up.
+		if err != nil {
+			b.logger.Info("bind: defer: err was not nil on return; deleting access key", lager.Data{
+				instanceIDLogKey: instanceID,
+				bindingIDLogKey:  bindingID,
+				detailsLogKey:    details,
+			})
+
+			// Careful: Do not shadow err, or future defers will not work.
+			if derr := b.user.DeleteAccessKey(b.userName(bindingID), accessKeyID); derr != nil {
+				b.logger.Error("bind: defer: error deleting access key", derr, lager.Data{
+					instanceIDLogKey: instanceID,
+					bindingIDLogKey:  bindingID,
+					detailsLogKey:    details,
+					"user":           b.userName(bindingID),
+				})
+			}
+		}
+	}()
 
 	policyARN, err = b.user.CreatePolicy(
 		b.policyName(bindingID),
@@ -410,8 +458,34 @@ func (b *S3Broker) Bind(
 		iamTags,
 	)
 	if err != nil {
+		b.logger.Error("bind: error creating policy", err, lager.Data{
+			instanceIDLogKey: instanceID,
+			bindingIDLogKey:  bindingID,
+			detailsLogKey:    details,
+			"user":           b.userName(bindingID),
+		})
 		return binding, err
 	}
+	defer func() {
+		// If the function returns an error, Bind did not complete and resources must be cleaned up.
+		if err != nil {
+			b.logger.Info("bind: defer: err was not nil on return; deleting policy", lager.Data{
+				instanceIDLogKey: instanceID,
+				bindingIDLogKey:  bindingID,
+				detailsLogKey:    details,
+			})
+
+			// Careful: Do not shadow err, or future defers will not work.
+			if derr := b.user.DeletePolicy(policyARN); derr != nil {
+				b.logger.Error("bind: defer: error deleting policy", derr, lager.Data{
+					instanceIDLogKey: instanceID,
+					bindingIDLogKey:  bindingID,
+					detailsLogKey:    details,
+					"user":           b.userName(bindingID),
+				})
+			}
+		}
+	}()
 
 	if err = b.user.AttachUserPolicy(b.userName(bindingID), policyARN); err != nil {
 		return binding, err

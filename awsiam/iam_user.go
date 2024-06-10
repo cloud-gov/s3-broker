@@ -39,7 +39,7 @@ func (i *IAMUser) Describe(userName string) (UserDetails, error) {
 
 	getUserOutput, err := i.iamsvc.GetUser(getUserInput)
 	if err != nil {
-		i.logger.Error("aws-iam-error", err)
+		i.logger.Error("get-user.aws-iam-error", err)
 		if awsErr, ok := err.(awserr.Error); ok {
 			return userDetails, errors.New(awsErr.Code() + ": " + awsErr.Message())
 		}
@@ -66,14 +66,15 @@ func (i *IAMUser) Create(
 	i.logger.Debug("create-user", lager.Data{"input": createUserInput})
 
 	createUserOutput, err := i.iamsvc.CreateUser(createUserInput)
+	i.logger.Debug("create-user", lager.Data{"output": createUserOutput})
+
 	if err != nil {
-		i.logger.Error("aws-iam-error", err)
+		i.logger.Error("create-user.aws-iam-error", err)
 		if awsErr, ok := err.(awserr.Error); ok {
 			return "", errors.New(awsErr.Code() + ": " + awsErr.Message())
 		}
 		return "", err
 	}
-	i.logger.Debug("create-user", lager.Data{"output": createUserOutput})
 
 	return aws.StringValue(createUserOutput.User.Arn), nil
 }
@@ -86,7 +87,7 @@ func (i *IAMUser) Delete(userName string) error {
 
 	deleteUserOutput, err := i.iamsvc.DeleteUser(deleteUserInput)
 	if err != nil {
-		i.logger.Error("aws-iam-error", err)
+		i.logger.Error("delete-user.aws-iam-error", err)
 		return err
 	}
 	i.logger.Debug("delete-user", lager.Data{"output": deleteUserOutput})
