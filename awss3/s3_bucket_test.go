@@ -210,3 +210,48 @@ func TestIsAccessDeniedException(t *testing.T) {
 		t.Fatal("expected isAccessDeniedException() to return false")
 	}
 }
+
+func TestIsNoSuchBucketError(t *testing.T) {
+	isAccessDenied := isNoSuchBucketError(awserr.New("NoSuchBucket", "no such bucket", errors.New("original error")))
+	if !isAccessDenied {
+		t.Fatal("expected isNoSuchBucketError() to return true")
+	}
+	isAccessDenied = isNoSuchBucketError(awserr.New("RandomError", "access denied", errors.New("original error")))
+	if isAccessDenied {
+		t.Fatal("expected isNoSuchBucketError() to return false")
+	}
+}
+
+func TestHandleDeleteError(t *testing.T) {
+	noSuchBucketErr := awserr.New("NoSuchBucket", "no such bucket", errors.New("original error"))
+	awsOtherErr := awserr.New("OtherError", "other error", errors.New("original error"))
+	nonAwsErr := errors.New("random error")
+
+	testCases := map[string]struct {
+		inputErr    error
+		expectedErr error
+	}{
+		"NoSuchBucket error, expect nil": {
+			inputErr: noSuchBucketErr,
+		},
+		"other AWS error, expect error": {
+			inputErr:    awsOtherErr,
+			expectedErr: awsOtherErr,
+		},
+		"non-AWS error, expect error": {
+			inputErr:    nonAwsErr,
+			expectedErr: nonAwsErr,
+		},
+	}
+
+	for name, test := range testCases {
+		t.Run(name, func(t *testing.T) {
+			mocks3Client := &MockS3Client{}
+			b := NewS3Bucket(mocks3Client, lager.NewLogger("test"))
+			err := b.handleDeleteError("fake", test.inputErr)
+			if !errors.Is(err, test.expectedErr) {
+				t.Errorf("expected return error %v, got %v", test.expectedErr, err)
+			}
+		})
+	}
+}
