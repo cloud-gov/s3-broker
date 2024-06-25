@@ -240,17 +240,10 @@ func (s *S3Bucket) Delete(bucketName string, deleteObjects bool) error {
 	}
 	deleteBucketOutput, err := s.s3svc.DeleteBucket(deleteBucketInput)
 	if err != nil {
-		s.logger.Error("aws-s3-error", err)
-		if awsErr, ok := err.(awserr.Error); ok {
-			if reqErr, ok := err.(awserr.RequestFailure); ok {
-				// AWS S3 returns a 400 if Bucket is not found
-				if reqErr.StatusCode() == 400 || reqErr.StatusCode() == 404 {
-					return ErrBucketDoesNotExist
-				}
-			}
-			return errors.New(awsErr.Code() + ": " + awsErr.Message())
+		s.logger.Error("aws-s3-delete-bucket-error", err)
+		if err := s.handleDeleteError(bucketName, err); err != nil {
+			return err
 		}
-		return err
 	}
 	s.logger.Debug("delete-bucket", lager.Data{"output": deleteBucketOutput})
 
@@ -263,11 +256,10 @@ func (s *S3Bucket) deleteBucketContents(bucketName string) error {
 	})
 
 	if err := s3manager.NewBatchDeleteWithClient(s.s3svc.(*s3.S3)).Delete(aws.BackgroundContext(), iter); err != nil {
-		s.logger.Error("aws-s3-error", err)
-		if awsErr, ok := err.(awserr.Error); ok {
-			return errors.New(awsErr.Code() + ": " + awsErr.Message())
+		s.logger.Error("aws-s3-delete-bucket-contents-error", err)
+		if err := s.handleDeleteError(bucketName, err); err != nil {
+			return err
 		}
-		return err
 	}
 	return nil
 }
@@ -336,6 +328,20 @@ func (s *S3Bucket) putBucketPolicyWithRetries(
 
 	s.logger.Debug("put-bucket-policy", lager.Data{"output": putPolicyOutput})
 	return err
+}
+
+func (s *S3Bucket) handleDeleteError(bucketName string, err error) error {
+	if awsErr, ok := err.(awserr.Error); ok {
+		if isNoSuchBucketError(awsErr) {
+			s.logger.Info(fmt.Sprintf("NoSuchBucket: %s", bucketName))
+			return nil
+		}
+	}
+	return err
+}
+
+func isNoSuchBucketError(awsErr awserr.Error) bool {
+	return awsErr.Code() == "NoSuchBucket"
 }
 
 func isAccessDeniedException(err error) bool {
