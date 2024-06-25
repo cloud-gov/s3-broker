@@ -336,6 +336,14 @@ func (s *S3Bucket) handleDeleteError(bucketName string, err error) error {
 			s.logger.Info(fmt.Sprintf("NoSuchBucket: %s", bucketName))
 			return nil
 		}
+		// Get original error
+		// if origErr := awsErr.OrigErr(); origErr != nil {
+		// 	// operate on original error.
+		// 	if isNoSuchBucketError(origErr) {
+		// 		s.logger.Info(fmt.Sprintf("NoSuchBucket: %s", bucketName))
+		// 		return nil
+		// 	}
+		// }
 	}
 	return err
 }

@@ -212,13 +212,33 @@ func TestIsAccessDeniedException(t *testing.T) {
 }
 
 func TestIsNoSuchBucketError(t *testing.T) {
-	isAccessDenied := isNoSuchBucketError(awserr.New("NoSuchBucket", "no such bucket", errors.New("original error")))
-	if !isAccessDenied {
+	isNoSuchBucket := isNoSuchBucketError(awserr.NewRequestFailure(
+		awserr.New("NoSuchBucket", "no such bucket", errors.New("original error")),
+		404,
+		"req-1",
+	))
+	if !isNoSuchBucket {
 		t.Fatal("expected isNoSuchBucketError() to return true")
 	}
-	isAccessDenied = isNoSuchBucketError(awserr.New("RandomError", "access denied", errors.New("original error")))
-	if isAccessDenied {
+	isNoSuchBucket = isNoSuchBucketError(awserr.New("NoSuchBucket", "no such bucket", errors.New("original error")))
+	if !isNoSuchBucket {
+		t.Fatal("expected isNoSuchBucketError() to return true")
+	}
+	isNoSuchBucket = isNoSuchBucketError(awserr.New("RandomError", "access denied", errors.New("original error")))
+	if isNoSuchBucket {
 		t.Fatal("expected isNoSuchBucketError() to return false")
+	}
+	origErrs := []error{
+		errors.New("fail"),
+	}
+	batchDeleteErr := awserr.NewBatchError(
+		"BatchedDeleteIncomplete",
+		"some objects have failed to be deleted.",
+		origErrs,
+	)
+	isNoSuchBucket = isNoSuchBucketError(batchDeleteErr)
+	if !isNoSuchBucket {
+		t.Fatal("expected isNoSuchBucketError() to return true")
 	}
 }
 
@@ -226,6 +246,15 @@ func TestHandleDeleteError(t *testing.T) {
 	noSuchBucketErr := awserr.New("NoSuchBucket", "no such bucket", errors.New("original error"))
 	awsOtherErr := awserr.New("OtherError", "other error", errors.New("original error"))
 	nonAwsErr := errors.New("random error")
+	requestFailureErr := awserr.New(
+		"BatchedDeleteIncomplete",
+		"some objects have failed to be deleted",
+		awserr.NewRequestFailure(
+			awserr.New("NoSuchBucket", "failed to perform batch operation", errors.New("fail")),
+			404,
+			"req-1",
+		),
+	)
 
 	testCases := map[string]struct {
 		inputErr    error
@@ -241,6 +270,9 @@ func TestHandleDeleteError(t *testing.T) {
 		"non-AWS error, expect error": {
 			inputErr:    nonAwsErr,
 			expectedErr: nonAwsErr,
+		},
+		"request failure wrapped error, expect nil": {
+			inputErr: requestFailureErr,
 		},
 	}
 
