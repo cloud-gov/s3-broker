@@ -249,6 +249,54 @@ func TestIsNoSuchBucketError(t *testing.T) {
 	}
 }
 
+func TestIsBatchDeleteNoBucketError(t *testing.T) {
+	batchDeleteNoSuchBucketErr := s3manager.NewBatchError(
+		"BatchedDeleteIncomplete",
+		"some objects have failed to be deleted.",
+		[]s3manager.Error{
+			{
+				OrigErr: awserr.NewRequestFailure(awserr.New("NoSuchBucket", "specified bucket does not exist", nil), 404, "req-1"),
+				Bucket:  aws.String("bucket"),
+				Key:     aws.String("key"),
+			},
+		},
+	)
+	batchDeleteOtherErr := s3manager.NewBatchError(
+		"BatchedDeleteIncomplete",
+		"some objects have failed to be deleted.",
+		[]s3manager.Error{
+			{
+				OrigErr: awserr.NewRequestFailure(awserr.New("OtherError", "this is a random error", nil), 500, "req-1"),
+				Bucket:  aws.String("bucket"),
+				Key:     aws.String("key"),
+			},
+		},
+	)
+
+	testCases := map[string]struct {
+		inputErr                awserr.Error
+		expectIsNoSuchBucketErr bool
+	}{
+		"batch delete NoSuchBucket error, expect true": {
+			inputErr:                batchDeleteNoSuchBucketErr,
+			expectIsNoSuchBucketErr: true,
+		},
+		"batch delete other error, expect error": {
+			inputErr:                batchDeleteOtherErr,
+			expectIsNoSuchBucketErr: false,
+		},
+	}
+
+	for name, test := range testCases {
+		t.Run(name, func(t *testing.T) {
+			isNoSuchBucket := isBatchDeleteNoBucketError(test.inputErr)
+			if isNoSuchBucket != test.expectIsNoSuchBucketErr {
+				t.Fatalf("expected isNoSuchBucketError() to return %t, got: %t", test.expectIsNoSuchBucketErr, isNoSuchBucket)
+			}
+		})
+	}
+}
+
 func TestHandleDeleteError(t *testing.T) {
 	noSuchBucketErr := awserr.New("NoSuchBucket", "no such bucket", errors.New("original error"))
 	awsOtherErr := awserr.New("OtherError", "other error", errors.New("original error"))
@@ -258,7 +306,7 @@ func TestHandleDeleteError(t *testing.T) {
 		404,
 		"req-1",
 	)
-	batchDeleteErr := s3manager.NewBatchError(
+	batchDeleteNoSuchBucketErr := s3manager.NewBatchError(
 		"BatchedDeleteIncomplete",
 		"some objects have failed to be deleted.",
 		[]s3manager.Error{
@@ -288,16 +336,14 @@ func TestHandleDeleteError(t *testing.T) {
 		"request failure wrapped error, expect nil": {
 			inputErr: requestFailureErr,
 		},
-		"batch delete error, expect nil": {
-			inputErr: batchDeleteErr,
+		"batch delete NoSuchBucket error, expect nil": {
+			inputErr: batchDeleteNoSuchBucketErr,
 		},
 	}
 
 	for name, test := range testCases {
 		t.Run(name, func(t *testing.T) {
-			mocks3Client := &MockS3Client{}
-			b := NewS3Bucket(mocks3Client, lager.NewLogger("test"))
-			err := b.handleDeleteError(test.inputErr)
+			err := handleDeleteError(test.inputErr)
 			if !errors.Is(err, test.expectedErr) {
 				t.Errorf("expected return error %v, got %v", test.expectedErr, err)
 			}
