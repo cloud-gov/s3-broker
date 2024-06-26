@@ -6,8 +6,10 @@ import (
 	"testing"
 
 	"code.cloudfoundry.org/lager/v3"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
 type MockS3Client struct {
@@ -212,33 +214,38 @@ func TestIsAccessDeniedException(t *testing.T) {
 }
 
 func TestIsNoSuchBucketError(t *testing.T) {
-	isNoSuchBucket := isNoSuchBucketError(awserr.NewRequestFailure(
-		awserr.New("NoSuchBucket", "no such bucket", errors.New("original error")),
-		404,
-		"req-1",
-	))
-	if !isNoSuchBucket {
-		t.Fatal("expected isNoSuchBucketError() to return true")
+	testCases := map[string]struct {
+		inputErr                error
+		expectIsNoSuchBucketErr bool
+	}{
+		"non-AWS error": {
+			inputErr:                errors.New("fail"),
+			expectIsNoSuchBucketErr: false,
+		},
+		"AWS NoSuchBucket error": {
+			inputErr:                awserr.New("NoSuchBucket", "no such bucket", errors.New("original error")),
+			expectIsNoSuchBucketErr: true,
+		},
+		"AWS random error": {
+			inputErr:                awserr.New("RandomError", "access denied", errors.New("original error")),
+			expectIsNoSuchBucketErr: false,
+		},
+		"AWS request failure error": {
+			inputErr: awserr.NewRequestFailure(
+				awserr.New("NoSuchBucket", "no such bucket", errors.New("original error")),
+				404,
+				"req-1",
+			),
+			expectIsNoSuchBucketErr: true,
+		},
 	}
-	isNoSuchBucket = isNoSuchBucketError(awserr.New("NoSuchBucket", "no such bucket", errors.New("original error")))
-	if !isNoSuchBucket {
-		t.Fatal("expected isNoSuchBucketError() to return true")
-	}
-	isNoSuchBucket = isNoSuchBucketError(awserr.New("RandomError", "access denied", errors.New("original error")))
-	if isNoSuchBucket {
-		t.Fatal("expected isNoSuchBucketError() to return false")
-	}
-	origErrs := []error{
-		errors.New("fail"),
-	}
-	batchDeleteErr := awserr.NewBatchError(
-		"BatchedDeleteIncomplete",
-		"some objects have failed to be deleted.",
-		origErrs,
-	)
-	isNoSuchBucket = isNoSuchBucketError(batchDeleteErr)
-	if !isNoSuchBucket {
-		t.Fatal("expected isNoSuchBucketError() to return true")
+	for name, test := range testCases {
+		t.Run(name, func(t *testing.T) {
+			isNoSuchBucket := isNoSuchBucketError(test.inputErr)
+			if isNoSuchBucket != test.expectIsNoSuchBucketErr {
+				t.Fatalf("expected isNoSuchBucketError() to return %t, got: %t", test.expectIsNoSuchBucketErr, isNoSuchBucket)
+			}
+		})
 	}
 }
 
@@ -246,14 +253,21 @@ func TestHandleDeleteError(t *testing.T) {
 	noSuchBucketErr := awserr.New("NoSuchBucket", "no such bucket", errors.New("original error"))
 	awsOtherErr := awserr.New("OtherError", "other error", errors.New("original error"))
 	nonAwsErr := errors.New("random error")
-	requestFailureErr := awserr.New(
+	requestFailureErr := awserr.NewRequestFailure(
+		awserr.New("NoSuchBucket", "failed to perform batch operation", errors.New("fail")),
+		404,
+		"req-1",
+	)
+	batchDeleteErr := s3manager.NewBatchError(
 		"BatchedDeleteIncomplete",
-		"some objects have failed to be deleted",
-		awserr.NewRequestFailure(
-			awserr.New("NoSuchBucket", "failed to perform batch operation", errors.New("fail")),
-			404,
-			"req-1",
-		),
+		"some objects have failed to be deleted.",
+		[]s3manager.Error{
+			{
+				OrigErr: awserr.NewRequestFailure(awserr.New("NoSuchBucket", "specified bucket does not exist", nil), 404, "req-1"),
+				Bucket:  aws.String("bucket"),
+				Key:     aws.String("key"),
+			},
+		},
 	)
 
 	testCases := map[string]struct {
@@ -274,13 +288,16 @@ func TestHandleDeleteError(t *testing.T) {
 		"request failure wrapped error, expect nil": {
 			inputErr: requestFailureErr,
 		},
+		"batch delete error, expect nil": {
+			inputErr: batchDeleteErr,
+		},
 	}
 
 	for name, test := range testCases {
 		t.Run(name, func(t *testing.T) {
 			mocks3Client := &MockS3Client{}
 			b := NewS3Bucket(mocks3Client, lager.NewLogger("test"))
-			err := b.handleDeleteError("fake", test.inputErr)
+			err := b.handleDeleteError(test.inputErr)
 			if !errors.Is(err, test.expectedErr) {
 				t.Errorf("expected return error %v, got %v", test.expectedErr, err)
 			}
