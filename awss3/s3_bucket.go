@@ -241,7 +241,7 @@ func (s *S3Bucket) Delete(bucketName string, deleteObjects bool) error {
 	deleteBucketOutput, err := s.s3svc.DeleteBucket(deleteBucketInput)
 	if err != nil {
 		s.logger.Error("aws-s3-delete-bucket-error", err)
-		if err := s.handleDeleteError(bucketName, err); err != nil {
+		if err := handleDeleteError(err); err != nil {
 			return err
 		}
 	}
@@ -257,7 +257,7 @@ func (s *S3Bucket) deleteBucketContents(bucketName string) error {
 
 	if err := s3manager.NewBatchDeleteWithClient(s.s3svc.(*s3.S3)).Delete(aws.BackgroundContext(), iter); err != nil {
 		s.logger.Error("aws-s3-delete-bucket-contents-error", err)
-		if err := s.handleDeleteError(bucketName, err); err != nil {
+		if err := handleDeleteError(err); err != nil {
 			return err
 		}
 	}
@@ -330,18 +330,33 @@ func (s *S3Bucket) putBucketPolicyWithRetries(
 	return err
 }
 
-func (s *S3Bucket) handleDeleteError(bucketName string, err error) error {
-	if awsErr, ok := err.(awserr.Error); ok {
-		if isNoSuchBucketError(awsErr) {
-			s.logger.Info(fmt.Sprintf("NoSuchBucket: %s", bucketName))
-			return nil
-		}
+func handleDeleteError(err error) error {
+	if isNoSuchBucketError(err) {
+		return nil
 	}
 	return err
 }
 
-func isNoSuchBucketError(awsErr awserr.Error) bool {
-	return awsErr.Code() == "NoSuchBucket"
+func isBatchDeleteNoBucketError(batchErr awserr.Error) bool {
+	origErr := batchErr.OrigErr()
+	if origBatchErrs, origAwsOk := origErr.(s3manager.Errors); origAwsOk {
+		for _, origBatchErr := range origBatchErrs {
+			if origBatchErr.OrigErr != nil {
+				return isNoSuchBucketError(origBatchErr.OrigErr)
+			}
+		}
+	}
+	return false
+}
+
+func isNoSuchBucketError(err error) bool {
+	if awsErr, ok := err.(awserr.Error); ok {
+		if _, batchOk := awsErr.(*s3manager.BatchError); batchOk {
+			return isBatchDeleteNoBucketError(awsErr)
+		}
+		return awsErr.Code() == "NoSuchBucket"
+	}
+	return false
 }
 
 func isAccessDeniedException(err error) bool {
