@@ -241,7 +241,7 @@ func (s *S3Bucket) Delete(bucketName string, deleteObjects bool) error {
 	deleteBucketOutput, err := s.s3svc.DeleteBucket(deleteBucketInput)
 	if err != nil {
 		s.logger.Error("aws-s3-delete-bucket-error", err)
-		if err := s.handleDeleteError(err); err != nil {
+		if err := handleDeleteError(err); err != nil {
 			return err
 		}
 	}
@@ -257,7 +257,7 @@ func (s *S3Bucket) deleteBucketContents(bucketName string) error {
 
 	if err := s3manager.NewBatchDeleteWithClient(s.s3svc.(*s3.S3)).Delete(aws.BackgroundContext(), iter); err != nil {
 		s.logger.Error("aws-s3-delete-bucket-contents-error", err)
-		if err := s.handleDeleteError(err); err != nil {
+		if err := handleDeleteError(err); err != nil {
 			return err
 		}
 	}
@@ -330,32 +330,30 @@ func (s *S3Bucket) putBucketPolicyWithRetries(
 	return err
 }
 
-func (s *S3Bucket) handleDeleteError(err error) error {
-	if batchErr, batchOk := err.(*s3manager.BatchError); batchOk {
-		return handleBatchDeleteError(*batchErr)
-	}
+func handleDeleteError(err error) error {
 	if isNoSuchBucketError(err) {
 		return nil
 	}
 	return err
 }
 
-func handleBatchDeleteError(batchErr s3manager.BatchError) error {
+func isBatchDeleteNoBucketError(batchErr awserr.Error) bool {
 	origErr := batchErr.OrigErr()
 	if origBatchErrs, origAwsOk := origErr.(s3manager.Errors); origAwsOk {
 		for _, origBatchErr := range origBatchErrs {
 			if origBatchErr.OrigErr != nil {
-				if isNoSuchBucketError(origBatchErr.OrigErr) {
-					return nil
-				}
+				return isNoSuchBucketError(origBatchErr.OrigErr)
 			}
 		}
 	}
-	return &batchErr
+	return false
 }
 
 func isNoSuchBucketError(err error) bool {
 	if awsErr, ok := err.(awserr.Error); ok {
+		if _, batchOk := awsErr.(*s3manager.BatchError); batchOk {
+			return isBatchDeleteNoBucketError(awsErr)
+		}
 		return awsErr.Code() == "NoSuchBucket"
 	}
 	return false
