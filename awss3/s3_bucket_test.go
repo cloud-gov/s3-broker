@@ -261,6 +261,22 @@ func TestIsBatchDeleteNoBucketError(t *testing.T) {
 			},
 		},
 	)
+	batchDeleteNoSuchBucketErr2 := s3manager.NewBatchError(
+		"BatchedDeleteIncomplete",
+		"some objects have failed to be deleted.",
+		[]s3manager.Error{
+			{
+				OrigErr: awserr.NewRequestFailure(awserr.New("OtherError", "this is a random error", nil), 500, "req-1"),
+				Bucket:  aws.String("bucket"),
+				Key:     aws.String("key"),
+			},
+			{
+				OrigErr: awserr.NewRequestFailure(awserr.New("NoSuchBucket", "specified bucket does not exist", nil), 404, "req-1"),
+				Bucket:  aws.String("bucket"),
+				Key:     aws.String("key"),
+			},
+		},
+	)
 	batchDeleteOtherErr := s3manager.NewBatchError(
 		"BatchedDeleteIncomplete",
 		"some objects have failed to be deleted.",
@@ -277,9 +293,13 @@ func TestIsBatchDeleteNoBucketError(t *testing.T) {
 		inputErr                awserr.Error
 		expectIsNoSuchBucketErr bool
 	}{
-		"batch delete NoSuchBucket error, expect true": {
+		"batch delete NoSuchBucket first error, expect true": {
 			inputErr:                batchDeleteNoSuchBucketErr,
 			expectIsNoSuchBucketErr: true,
+		},
+		"batch delete NoSuchBucket second error, expect false": {
+			inputErr:                batchDeleteNoSuchBucketErr2,
+			expectIsNoSuchBucketErr: false,
 		},
 		"batch delete other error, expect error": {
 			inputErr:                batchDeleteOtherErr,

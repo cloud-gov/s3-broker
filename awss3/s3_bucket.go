@@ -227,7 +227,6 @@ func (s *S3Bucket) Modify(bucketName string, bucketDetails BucketDetails) error 
 }
 
 func (s *S3Bucket) Delete(bucketName string, deleteObjects bool) error {
-
 	deleteBucketInput := &s3.DeleteBucketInput{
 		Bucket: aws.String(bucketName),
 	}
@@ -340,10 +339,12 @@ func handleDeleteError(err error) error {
 func isBatchDeleteNoBucketError(batchErr awserr.Error) bool {
 	origErr := batchErr.OrigErr()
 	if origBatchErrs, origAwsOk := origErr.(s3manager.Errors); origAwsOk {
-		for _, origBatchErr := range origBatchErrs {
-			if origBatchErr.OrigErr != nil {
-				return isNoSuchBucketError(origBatchErr.OrigErr)
-			}
+		if len(origBatchErrs) > 1 {
+			return false
+		}
+		origBatchErr := origBatchErrs[0]
+		if origBatchErr.OrigErr != nil {
+			return isNoSuchBucketError(origBatchErr.OrigErr)
 		}
 	}
 	return false
