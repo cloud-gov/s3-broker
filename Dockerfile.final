@@ -1,5 +1,5 @@
 FROM scratch
-MAINTAINER ape factory GmbH
+LABEL org.opencontainers.image.authors="ape factory GmbH"
 
 # Add files
 ADD s3-broker /s3-broker
