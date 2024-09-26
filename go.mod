@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	code.cloudfoundry.org/lager/v3 v3.0.2
-	github.com/aws/aws-sdk-go v1.44.251
+	github.com/aws/aws-sdk-go v1.55.5
 	github.com/cloud-gov/go-broker-tags v0.0.0-20240112192542-8f1bb5859679
 	github.com/cloudfoundry-community/go-cfclient/v3 v3.0.0-alpha.6
 	github.com/google/go-cmp v0.6.0
