@@ -43,7 +43,7 @@ var _ = Describe("Broker", func() {
 				AccessKeyID:     "access-key!",
 				SecretAccessKey: "secret-key!",
 			})
-			Expect(uri).To(Equal("s3://access-key%21:secret-key%21@s3.amazonaws.com/bucket"))
+			Expect(uri).To(Equal("s3://access-key%21:secret-key%21@s3-fips.amazonaws.com/bucket"))
 		})
 
 		It("builds the uri for a bucket in not us-east-1", func() {
@@ -63,7 +63,7 @@ var _ = Describe("Broker", func() {
 				AccessKeyID:     "access-key!",
 				SecretAccessKey: "secret-key!",
 			})
-			Expect(uri).To(Equal("s3://access-key%21:secret-key%21@s3-us-gov-west-1.amazonaws.com/bucket"))
+			Expect(uri).To(Equal("s3://access-key%21:secret-key%21@s3-fips.us-gov-west-1.amazonaws.com/bucket"))
 		})
 	})
 })
