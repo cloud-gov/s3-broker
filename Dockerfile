@@ -1,5 +1,5 @@
 FROM golang
-MAINTAINER ape factory GmbH
+LABEL org.opencontainers.image.authors="ape factory GmbH"
 
 # Set environment variables
 ENV CGO_ENABLED 0
