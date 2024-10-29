@@ -746,7 +746,6 @@ func TestBind(t *testing.T) {
 					planName:    "plan1",
 					serviceName: "service1",
 				},
-				provider:   &MockProvider{},
 				tagManager: &mockTagGenerator{},
 				user: &mockUser{
 					createPolicyErr: NewTestErr("error creating policy"),
@@ -775,7 +774,6 @@ func TestBind(t *testing.T) {
 					planName:    "plan1",
 					serviceName: "service1",
 				},
-				provider:   &MockProvider{},
 				tagManager: &mockTagGenerator{},
 				user: &mockUser{
 					attachUserPolicyErr: NewTestErr("error attaching policy"),
@@ -804,7 +802,6 @@ func TestBind(t *testing.T) {
 					planName:    "plan1",
 					serviceName: "service1",
 				},
-				provider:   &MockProvider{},
 				tagManager: &mockTagGenerator{},
 				user:       &mockUser{},
 			},

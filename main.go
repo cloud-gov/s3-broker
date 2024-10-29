@@ -21,7 +21,6 @@ import (
 	"github.com/cloud-gov/s3-broker/awsiam"
 	"github.com/cloud-gov/s3-broker/awss3"
 	"github.com/cloud-gov/s3-broker/broker"
-	"github.com/cloud-gov/s3-broker/provider"
 )
 
 var (
@@ -97,8 +96,6 @@ func main() {
 		}
 	}
 
-	provider := provider.New(config.S3Config.Provider, config.S3Config.Region, config.S3Config.Endpoint)
-
 	tagManager, err := brokertags.NewCFTagManager(
 		"S3 broker",
 		config.Environment,
@@ -112,7 +109,6 @@ func main() {
 
 	serviceBroker := broker.New(
 		config.S3Config,
-		provider,
 		s3bucket,
 		user,
 		client,

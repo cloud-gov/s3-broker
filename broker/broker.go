@@ -18,7 +18,6 @@ import (
 
 	"github.com/cloud-gov/s3-broker/awsiam"
 	"github.com/cloud-gov/s3-broker/awss3"
-	"github.com/cloud-gov/s3-broker/provider"
 
 	brokertags "github.com/cloud-gov/go-broker-tags"
 )
@@ -33,7 +32,6 @@ var (
 )
 
 type S3Broker struct {
-	provider                     provider.Provider
 	insecureSkipVerify           bool
 	iamPath                      string
 	userPrefix                   string
@@ -69,7 +67,6 @@ type Credentials struct {
 
 func New(
 	config Config,
-	provider provider.Provider,
 	bucket awss3.Bucket,
 	user awsiam.User,
 	cfClient *cf.Client,
@@ -77,7 +74,6 @@ func New(
 	tagManager brokertags.TagManager,
 ) *S3Broker {
 	return &S3Broker{
-		provider:                     provider,
 		insecureSkipVerify:           config.InsecureSkipVerify,
 		iamPath:                      config.IamPath,
 		userPrefix:                   config.UserPrefix,
@@ -217,7 +213,7 @@ func (b *S3Broker) GetBucketURI(credentials Credentials) string {
 		"s3://%s:%s@%s/%s",
 		url.QueryEscape(credentials.AccessKeyID),
 		url.QueryEscape(credentials.SecretAccessKey),
-		b.provider.Endpoint(),
+		credentials.FIPSEndpoint,
 		credentials.Bucket,
 	)
 }
@@ -378,7 +374,7 @@ func (b *S3Broker) Bind(
 				credentials.Bucket = bucketDetails.BucketName
 				credentials.Region = bucketDetails.Region
 				credentials.FIPSEndpoint = bucketDetails.FIPSEndpoint
-				credentials.Endpoint = b.provider.Endpoint()
+				credentials.Endpoint = bucketDetails.FIPSEndpoint
 				credentials.InsecureSkipVerify = b.insecureSkipVerify
 			} else {
 				credentials.AdditionalBuckets = append(credentials.AdditionalBuckets, bucketDetails.BucketName)

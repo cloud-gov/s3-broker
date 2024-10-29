@@ -7,7 +7,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	. "github.com/cloud-gov/s3-broker/broker"
-	"github.com/cloud-gov/s3-broker/provider"
 )
 
 type mockTagGenerator struct {
@@ -27,10 +26,8 @@ func (mt *mockTagGenerator) GenerateTags(
 var _ = Describe("Broker", func() {
 	Describe("GetBucketURI", func() {
 		It("builds the uri for a bucket in us-east-1", func() {
-			provider := provider.New("aws", "us-east-1", "")
 			broker := New(
 				Config{},
-				provider,
 				nil,
 				nil,
 				nil,
@@ -47,10 +44,8 @@ var _ = Describe("Broker", func() {
 		})
 
 		It("builds the uri for a bucket in not us-east-1", func() {
-			provider := provider.New("aws", "us-gov-west-1", "")
 			broker := New(
 				Config{},
-				provider,
 				nil,
 				nil,
 				nil,
