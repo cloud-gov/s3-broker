@@ -7,7 +7,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	. "github.com/cloud-gov/s3-broker/broker"
-	"github.com/cloud-gov/s3-broker/provider"
 )
 
 type mockTagGenerator struct {
@@ -27,10 +26,8 @@ func (mt *mockTagGenerator) GenerateTags(
 var _ = Describe("Broker", func() {
 	Describe("GetBucketURI", func() {
 		It("builds the uri for a bucket in us-east-1", func() {
-			provider := provider.New("aws", "us-east-1", "")
 			broker := New(
 				Config{},
-				provider,
 				nil,
 				nil,
 				nil,
@@ -42,15 +39,14 @@ var _ = Describe("Broker", func() {
 				Region:          "us-east-1",
 				AccessKeyID:     "access-key!",
 				SecretAccessKey: "secret-key!",
+				FIPSEndpoint:    "s3-fips.us-east-1.amazonaws.com",
 			})
-			Expect(uri).To(Equal("s3://access-key%21:secret-key%21@s3.amazonaws.com/bucket"))
+			Expect(uri).To(Equal("s3://access-key%21:secret-key%21@s3-fips.us-east-1.amazonaws.com/bucket"))
 		})
 
 		It("builds the uri for a bucket in not us-east-1", func() {
-			provider := provider.New("aws", "us-gov-west-1", "")
 			broker := New(
 				Config{},
-				provider,
 				nil,
 				nil,
 				nil,
@@ -62,8 +58,9 @@ var _ = Describe("Broker", func() {
 				Region:          "us-gov-west-1",
 				AccessKeyID:     "access-key!",
 				SecretAccessKey: "secret-key!",
+				FIPSEndpoint:    "s3-fips.us-gov-west-1.amazonaws.com",
 			})
-			Expect(uri).To(Equal("s3://access-key%21:secret-key%21@s3-us-gov-west-1.amazonaws.com/bucket"))
+			Expect(uri).To(Equal("s3://access-key%21:secret-key%21@s3-fips.us-gov-west-1.amazonaws.com/bucket"))
 		})
 	})
 })
