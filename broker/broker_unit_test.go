@@ -400,6 +400,7 @@ func TestUnbind(t *testing.T) {
 			},
 			expectUnbindSpec: domain.UnbindSpec{},
 		},
+		// Add NoSuchEntity error on GetUser
 		"NoSuchEntity error when deleting user": {
 			instanceId:    "fake-instance-id",
 			bindingId:     "deleted-1",
