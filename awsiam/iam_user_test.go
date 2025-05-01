@@ -48,8 +48,20 @@ var _ = Describe("IAM User", func() {
 		user = NewIAMUser(iamsvc, logger)
 	})
 	var _ = Describe("Exists", func() {
-		It("returns false by default", func() {
-			userExistence, err := user.Exists(username)
+		/*		var (
+							userExistence bool
+							//			existsUserError error
+						)
+
+				BeforeEach(func() {
+					userExistence = true
+					//			existsUserError = nil
+				})
+		*/
+
+		It("doesn't error out", func() {
+			userExistence, err := user.Exists(userName)
+			Expect(userExistence).To(BeTrue())
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})

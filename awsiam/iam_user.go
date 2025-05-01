@@ -27,6 +27,11 @@ func NewIAMUser(
 	}
 }
 
+// boolean func Exists goes here; only returns True, False, err
+func (i *IAMUser) Exists(userName string) (bool, error) {
+	return true, nil
+}
+
 func (i *IAMUser) Describe(userName string) (UserDetails, error) {
 	userDetails := UserDetails{
 		UserName: userName,
@@ -52,6 +57,8 @@ func (i *IAMUser) Describe(userName string) (UserDetails, error) {
 
 	return userDetails, nil
 }
+
+// copy above into GET up to line 40, then return iamsve...
 
 func (i *IAMUser) Create(
 	userName,
