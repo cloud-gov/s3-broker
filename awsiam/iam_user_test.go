@@ -47,7 +47,12 @@ var _ = Describe("IAM User", func() {
 
 		user = NewIAMUser(iamsvc, logger)
 	})
-
+	var _ = Describe("Exists", func() {
+		It("returns false by default", func() {
+			userExistence, err := user.Exists(username)
+			Expect(err).ToNot(HaveOccurred())
+		})
+	})
 	var _ = Describe("Describe", func() {
 		var (
 			properUserDetails UserDetails
