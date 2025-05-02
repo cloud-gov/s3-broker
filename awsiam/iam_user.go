@@ -35,6 +35,14 @@ func (i *IAMUser) Exists(userName string) (bool, error) {
 	i.logger.Debug("exists-user", lager.Data{"input": existsUserInput})
 	_, err := i.iamsvc.GetUser(existsUserInput)
 	if err != nil {
+		// log the error
+		i.logger.Error("exists-user.aws-iam-error", err)
+		// if an aws error do things
+		if awsErr, ok := err.(awserr.Error); ok {
+			if awsErr.Code() == "NoSuchEntity" {
+				return false, nil
+			}
+		}
 		return false, err
 	}
 	return true, nil
