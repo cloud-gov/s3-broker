@@ -87,15 +87,17 @@ var _ = Describe("IAM User", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		When("the user doesn't exist", func() {
-			BeforeEach(func() {
-				existsUserError = awserr.New("NoSuchEntity", "user does not exist", errors.New("original error"))
-			})
+		Context("the AWS getUser call returns an error", func() {
+			When("AWS returns NoSuch entity", func() {
+				BeforeEach(func() {
+					existsUserError = awserr.New("NoSuchEntity", "user does not exist", errors.New("original error"))
+				})
 
-			It("is false for an non-existing userName", func() {
-				userExistence, err := user.Exists(userName)
-				Expect(userExistence).To(BeFalse())
-				Expect(err).NotTo(HaveOccurred())
+				It("is false for an non-existing userName", func() {
+					userExistence, err := user.Exists(userName)
+					Expect(userExistence).To(BeFalse())
+					Expect(err).NotTo(HaveOccurred())
+				})
 			})
 		})
 	})
