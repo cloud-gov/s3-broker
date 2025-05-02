@@ -28,21 +28,19 @@ func NewIAMUser(
 }
 
 func (i *IAMUser) Exists(userName string) (bool, error) {
-	//Format userName as an AWS string
 	existsUserInput := &iam.GetUserInput{
 		UserName: aws.String(userName),
 	}
 	i.logger.Debug("exists-user", lager.Data{"input": existsUserInput})
 	_, err := i.iamsvc.GetUser(existsUserInput)
 	if err != nil {
-		// log the error
 		i.logger.Error("exists-user.aws-iam-error", err)
-		// if an aws error do things
 		if awsErr, ok := err.(awserr.Error); ok {
 			if awsErr.Code() == "NoSuchEntity" {
 				return false, nil
 			}
 		}
+		// FIXME: returning false seems wrong here
 		return false, err
 	}
 	return true, nil
@@ -73,8 +71,6 @@ func (i *IAMUser) Describe(userName string) (UserDetails, error) {
 
 	return userDetails, nil
 }
-
-// copy above into GET up to line 40, then return iamsve...
 
 func (i *IAMUser) Create(
 	userName,

@@ -48,10 +48,8 @@ var _ = Describe("IAM User", func() {
 		user = NewIAMUser(iamsvc, logger)
 	})
 	var _ = Describe("Exists", func() {
-		// "Declare in container nodes, initialize in setup nodes"
-		// iamsvc was declared in a node above "Describe("IAM User")"
+		// Peter note to self: "Declare in container nodes, initialize in setup nodes"
 		var (
-			// properUserDetails UserDetails
 			existsUser      *iam.User
 			existsUserInput *iam.GetUserInput
 			existsUserError awserr.Error
@@ -69,7 +67,7 @@ var _ = Describe("IAM User", func() {
 		JustBeforeEach(func() {
 			iamsvc.Handlers.Clear()
 			iamCall = func(r *request.Request) {
-				// gingko allows assertions to be made in both setup nodes (like this)
+				// Peter Note: gingko allows assertions to be made in both setup nodes (like this)
 				// and subject nodes (below)
 				Expect(r.Operation.Name).To(Equal("GetUser"))
 				Expect(r.Params).To(BeAssignableToTypeOf(&iam.GetUserInput{}))
@@ -88,7 +86,7 @@ var _ = Describe("IAM User", func() {
 		})
 
 		Context("the AWS getUser call returns an error", func() {
-			When("AWS returns NoSuch entity", func() {
+			When("AWS returns NoSuchEntity", func() {
 				BeforeEach(func() {
 					existsUserError = awserr.New("NoSuchEntity", "user does not exist", errors.New("original error"))
 				})
@@ -97,6 +95,17 @@ var _ = Describe("IAM User", func() {
 					userExistence, err := user.Exists(userName)
 					Expect(userExistence).To(BeFalse())
 					Expect(err).NotTo(HaveOccurred())
+				})
+			})
+			When("it returns some other error", func() {
+				BeforeEach(func() {
+					existsUserError = awserr.New("AccessDenied", "failed", errors.New("original error"))
+				})
+
+				It("returns the proper error", func() {
+					_, err := user.Exists(userName)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("AccessDenied"))
 				})
 			})
 		})
@@ -137,7 +146,7 @@ var _ = Describe("IAM User", func() {
 				Expect(r.Params).To(Equal(getUserInput))
 				data := r.Data.(*iam.GetUserOutput)
 				data.User = getUser
-				r.Error = getUserError // Here the response r.error is error we initialized in BeforeEach
+				r.Error = getUserError
 			}
 			iamsvc.Handlers.Send.PushBack(iamCall)
 		})
