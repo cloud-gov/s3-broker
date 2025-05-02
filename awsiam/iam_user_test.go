@@ -48,23 +48,49 @@ var _ = Describe("IAM User", func() {
 		user = NewIAMUser(iamsvc, logger)
 	})
 	var _ = Describe("Exists", func() {
-		/*		var (
-							userExistence bool
-							//			existsUserError error
-						)
+		var (
+			// properUserDetails UserDetails
+			existsUser      *iam.User
+			existsUserInput *iam.GetUserInput
+			existsUserError awserr.Error
+		)
+		BeforeEach(func() {
+			/*
+				properUserDetails = UserDetails{
+					UserName: userName,
+					UserARN:  "user-arn",
+					UserID:   "user-id",
+				}
+			*/
+			existsUser = &iam.User{
+				Arn:    aws.String("user-arn"),
+				UserId: aws.String("user-id"),
+			}
+			existsUserInput = &iam.GetUserInput{
+				UserName: aws.String(userName),
+			}
+			existsUserError = nil
+		})
+		JustBeforeEach(func() {
+			iamsvc.Handlers.Clear()
+			iamCall = func(r *request.Request) {
+				Expect(r.Operation.Name).To(Equal("GetUser"))
+				Expect(r.Params).To(BeAssignableToTypeOf(&iam.GetUserInput{}))
+				Expect(r.Params).To(Equal(existsUserInput))
+				data := r.Data.(*iam.GetUserOutput)
+				data.User = existsUser
+				r.Error = existsUserError
+			}
+			iamsvc.Handlers.Send.PushBack(iamCall)
+		})
 
-				BeforeEach(func() {
-					userExistence = true
-					//			existsUserError = nil
-				})
-		*/
-
-		It("doesn't error out", func() {
+		It("it is true for an existing userName", func() {
 			userExistence, err := user.Exists(userName)
 			Expect(userExistence).To(BeTrue())
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})
+
 	var _ = Describe("Describe", func() {
 		var (
 			properUserDetails UserDetails

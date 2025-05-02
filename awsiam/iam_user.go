@@ -27,8 +27,16 @@ func NewIAMUser(
 	}
 }
 
-// boolean func Exists goes here; only returns True, False, err
 func (i *IAMUser) Exists(userName string) (bool, error) {
+	//Format userName as an AWS string
+	existsUserInput := &iam.GetUserInput{
+		UserName: aws.String(userName),
+	}
+	i.logger.Debug("exists-user", lager.Data{"input": existsUserInput})
+	_, err := i.iamsvc.GetUser(existsUserInput)
+	if err != nil {
+		return false, err
+	}
 	return true, nil
 }
 
@@ -40,11 +48,11 @@ func (i *IAMUser) Describe(userName string) (UserDetails, error) {
 	getUserInput := &iam.GetUserInput{
 		UserName: aws.String(userName),
 	}
-	i.logger.Debug("get-user", lager.Data{"input": getUserInput})
+	i.logger.Debug("describe-user", lager.Data{"input": getUserInput})
 
 	getUserOutput, err := i.iamsvc.GetUser(getUserInput)
 	if err != nil {
-		i.logger.Error("get-user.aws-iam-error", err)
+		i.logger.Error("describe-user.aws-iam-error", err)
 		if awsErr, ok := err.(awserr.Error); ok {
 			return userDetails, errors.New(awsErr.Code() + ": " + awsErr.Message())
 		}
