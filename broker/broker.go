@@ -511,15 +511,13 @@ func (b *S3Broker) Unbind(
 
 	userName := b.userName(bindingID)
 
-	/*
-		exists, err := b.user.Exists(userName)
-		if err != nil {
-			return domain.UnbindSpec{}, err
-		}
-		if !exists {
-			return domain.UnbindSpec{}, nil
-		}
-	*/
+	exists, err := b.user.Exists(userName)
+	if err != nil {
+		return domain.UnbindSpec{}, err
+	}
+	if !exists {
+		return domain.UnbindSpec{}, nil
+	}
 
 	accessKeys, err := b.user.ListAccessKeys(userName)
 	if b.handleUnbindError(err) != nil {

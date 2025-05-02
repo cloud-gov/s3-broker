@@ -172,6 +172,10 @@ func (u *mockUser) AttachUserPolicy(userName, policyARN string) error {
 	return nil
 }
 
+func (u *mockUser) Exists(userName string) (bool, error) {
+	return true, nil
+}
+
 func (u *mockUser) Describe(userName string) (awsiam.UserDetails, error) {
 	return awsiam.UserDetails{}, nil
 }
@@ -400,7 +404,6 @@ func TestUnbind(t *testing.T) {
 			},
 			expectUnbindSpec: domain.UnbindSpec{},
 		},
-		// Add NoSuchEntity error on GetUser
 		"NoSuchEntity error when deleting user": {
 			instanceId:    "fake-instance-id",
 			bindingId:     "deleted-1",
