@@ -40,7 +40,6 @@ func (i *IAMUser) Exists(userName string) (bool, error) {
 				return false, nil
 			}
 		}
-		// FIXME: returning false seems wrong here
 		return false, err
 	}
 	return true, nil
