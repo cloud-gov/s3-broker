@@ -47,6 +47,69 @@ var _ = Describe("IAM User", func() {
 
 		user = NewIAMUser(iamsvc, logger)
 	})
+	var _ = Describe("Exists", func() {
+		// Peter note to self: "Declare in container nodes, initialize in setup nodes"
+		var (
+			existsUser      *iam.User
+			existsUserInput *iam.GetUserInput
+			existsUserError awserr.Error
+		)
+		BeforeEach(func() {
+			existsUser = &iam.User{
+				Arn:    aws.String("user-arn"),
+				UserId: aws.String("user-id"),
+			}
+			existsUserInput = &iam.GetUserInput{
+				UserName: aws.String(userName),
+			}
+			existsUserError = nil
+		})
+		JustBeforeEach(func() {
+			iamsvc.Handlers.Clear()
+			iamCall = func(r *request.Request) {
+				// Peter Note: gingko allows assertions to be made in both setup nodes (like this)
+				// and subject nodes (below)
+				Expect(r.Operation.Name).To(Equal("GetUser"))
+				Expect(r.Params).To(BeAssignableToTypeOf(&iam.GetUserInput{}))
+				Expect(r.Params).To(Equal(existsUserInput))
+				data := r.Data.(*iam.GetUserOutput)
+				data.User = existsUser
+				r.Error = existsUserError
+			}
+			iamsvc.Handlers.Send.PushBack(iamCall)
+		})
+
+		It("is true for an existing userName", func() {
+			userExistence, err := user.Exists(userName)
+			Expect(userExistence).To(BeTrue())
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		Context("the AWS getUser call returns an error", func() {
+			When("AWS returns NoSuchEntity", func() {
+				BeforeEach(func() {
+					existsUserError = awserr.New("NoSuchEntity", "user does not exist", errors.New("original error"))
+				})
+
+				It("is false for an non-existing userName", func() {
+					userExistence, err := user.Exists(userName)
+					Expect(userExistence).To(BeFalse())
+					Expect(err).NotTo(HaveOccurred())
+				})
+			})
+			When("it returns some other error", func() {
+				BeforeEach(func() {
+					existsUserError = awserr.New("AccessDenied", "failed", errors.New("original error"))
+				})
+
+				It("returns the proper error", func() {
+					_, err := user.Exists(userName)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("AccessDenied"))
+				})
+			})
+		})
+	})
 
 	var _ = Describe("Describe", func() {
 		var (

@@ -27,6 +27,24 @@ func NewIAMUser(
 	}
 }
 
+func (i *IAMUser) Exists(userName string) (bool, error) {
+	existsUserInput := &iam.GetUserInput{
+		UserName: aws.String(userName),
+	}
+	i.logger.Debug("exists-user", lager.Data{"input": existsUserInput})
+	_, err := i.iamsvc.GetUser(existsUserInput)
+	if err != nil {
+		i.logger.Error("exists-user.aws-iam-error", err)
+		if awsErr, ok := err.(awserr.Error); ok {
+			if awsErr.Code() == "NoSuchEntity" {
+				return false, nil
+			}
+		}
+		return false, err
+	}
+	return true, nil
+}
+
 func (i *IAMUser) Describe(userName string) (UserDetails, error) {
 	userDetails := UserDetails{
 		UserName: userName,
@@ -35,11 +53,11 @@ func (i *IAMUser) Describe(userName string) (UserDetails, error) {
 	getUserInput := &iam.GetUserInput{
 		UserName: aws.String(userName),
 	}
-	i.logger.Debug("get-user", lager.Data{"input": getUserInput})
+	i.logger.Debug("describe-user", lager.Data{"input": getUserInput})
 
 	getUserOutput, err := i.iamsvc.GetUser(getUserInput)
 	if err != nil {
-		i.logger.Error("get-user.aws-iam-error", err)
+		i.logger.Error("describe-user.aws-iam-error", err)
 		if awsErr, ok := err.(awserr.Error); ok {
 			return userDetails, errors.New(awsErr.Code() + ": " + awsErr.Message())
 		}
