@@ -10,7 +10,6 @@ import (
 )
 
 type User interface {
-	Exists(userName string) (bool, error)
 	Describe(userName string) (UserDetails, error)
 	Create(userName, iamPath string, iamTags []*iam.Tag) (string, error)
 	Delete(userName string) error
