@@ -32,7 +32,7 @@ if [ "${status}" != "200" ]; then
 fi
 
 cf create-service-key ${SERVICE_INSTANCE_NAME} ${SERVICE_INSTANCE_NAME}-service-key
-cf service-key ${SERVICE_INSTANCE_NAME} ${SERVICE_INSTANCE_NAME}-service-key 
+cf service-keys ${SERVICE_INSTANCE_NAME} 
 cf delete-service-key ${SERVICE_INSTANCE_NAME} ${SERVICE_INSTANCE_NAME}-service-key
 
 cf delete -f "${APP_NAME}"
