@@ -6,13 +6,15 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 	brokertags "github.com/cloud-gov/go-broker-tags"
-	"github.com/cloud-gov/s3-broker"
+	s3Broker "github.com/cloud-gov/s3-broker"
 	tasksS3 "github.com/cloud-gov/s3-broker/cmd/tasks/s3"
-	"github.com/cloud-gov/s3-broker/config"
+	cf "github.com/cloudfoundry/go-cfclient/v3/client"
+	cfconfig "github.com/cloudfoundry/go-cfclient/v3/config"
+
 	"golang.org/x/exp/slices"
 )
 
@@ -31,6 +33,14 @@ func (s *serviceNames) Set(value string) error {
 
 var servicesToTag serviceNames
 
+var (
+	configFilePath string
+)
+
+func init() {
+	flag.StringVar(&configFilePath, "config", "", "Location of the config file")
+}
+
 func run() error {
 	actionPtr := flag.String("action", "", "Action to take. Accepted options: 'reconcile-tags'")
 	flag.Var(&servicesToTag, "service", "Specify AWS service whose instances should have tags updated. Accepted options: 's3'")
@@ -44,11 +54,28 @@ func run() error {
 		return errors.New("--service argument is required. Specify --service multiple times to update tags for multiple services")
 	}
 
+	config, err := s3Broker.LoadConfig(configFilePath)
+	if err != nil {
+		log.Fatalf("Error loading config file: %s", err)
+	}
+
 	var settings config.Settings
 
 	// Load settings from environment
 	if err := settings.LoadFromEnv(); err != nil {
 		return fmt.Errorf("there was an error loading settings: %w", err)
+	}
+
+	var client *cf.Client
+	if settings.CfApiUrl != "" && settings.CfApiClientId != "" && settings.CfApiClientSecret != "" {
+		cfConfig, err := cfconfig.New(settings.CfApiUrl, cfconfig.ClientCredentials(settings.CfApiClientId, settings.CfApiClientSecret))
+		if err != nil {
+			log.Fatalf("Error creating CF config: %s", err)
+		}
+		client, err = cf.New(cfConfig)
+		if err != nil {
+			log.Fatalf("Error creating CF client: %s", err)
+		}
 	}
 
 	sess, err := session.NewSession(&aws.Config{
@@ -75,7 +102,7 @@ func run() error {
 
 		if slices.Contains(servicesToTag, "s3") {
 			s3Client := s3.New(sess)
-			err := tasksS3.ReconcileS3BucketTags(s3Client, tagManager)
+			err := tasksS3.ReconcileS3BucketTags(s3Client, tagManager, client)
 			if err != nil {
 				return err
 			}

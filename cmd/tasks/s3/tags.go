@@ -10,9 +10,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	brokertags "github.com/cloud-gov/go-broker-tags"
-	"github.com/cloud-gov/s3-broker/broker"
-	s3bucket "github.com/cloud-gov/s3-broker/cmd/tasks/s3"
+	broker "github.com/cloud-gov/s3-broker/broker"
 	task_tag "github.com/cloud-gov/s3-broker/cmd/tasks/tags"
+	cf "github.com/cloudfoundry/go-cfclient/v3/client"
 )
 
 func getS3BucketTags(s3Client s3iface.S3API, bucketName string) ([]*s3.Tag, error) {
@@ -74,7 +74,20 @@ func processS3Bucket(s3Client s3iface.S3API, bucketName string, generatedTags []
 	return nil
 }
 
-func ReconcileS3BucketTags(s3Client s3iface.S3API, tagManager brokertags.TagManager) error {
+func convertTagsToS3Tags(tags map[string]string) []*s3.Tag {
+	var s3Tags []*s3.Tag
+	for k, v := range tags {
+		tag := s3.Tag{
+			Key:   aws.String(k),
+			Value: aws.String(v),
+		}
+
+		s3Tags = append(s3Tags, &tag)
+	}
+	return s3Tags
+}
+
+func ReconcileS3BucketTags(s3Client s3iface.S3API, tagManager brokertags.TagManager, cfClient *cf.Client) error {
 	output, err := s3Client.ListBuckets(&s3.ListBucketsInput{})
 	if err != nil {
 		return fmt.Errorf("error listing buckets: %w", err)
@@ -85,10 +98,13 @@ func ReconcileS3BucketTags(s3Client s3iface.S3API, tagManager brokertags.TagMana
 			continue
 		}
 		bucketName := *bucket.Name
+
 		if !strings.HasPrefix(bucketName, "cg-") {
 			continue
 		}
+
 		instanceUUID := strings.TrimPrefix(bucketName, "cg-")
+
 		taggingOutput, err := s3Client.GetBucketTagging(&s3.GetBucketTaggingInput{
 			Bucket: aws.String(bucketName),
 		})
@@ -141,8 +157,8 @@ func ReconcileS3BucketTags(s3Client s3iface.S3API, tagManager brokertags.TagMana
 			return fmt.Errorf("error generating new tags for bucket %s: %s", bucketName, err)
 		}
 
-		S3Tags := s3bucket.ConvertTagsToS3Tags(generatedTags)
-		err = processS3Bucket(s3Client, bucketName, S3Tags)
+		s3Tags := convertTagsToS3Tags(generatedTags)
+		err = processS3Bucket(s3Client, bucketName, s3Tags)
 		if err != nil {
 			return err
 		}
