@@ -10,10 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
-	awsRds "github.com/aws/aws-sdk-go/service/rds"
 	brokertags "github.com/cloud-gov/go-broker-tags"
-	. "github.com/cloud-gov/s3-broker"
+	"github.com/cloud-gov/s3-broker"
 	tasksS3 "github.com/cloud-gov/s3-broker/cmd/tasks/s3"
 	"github.com/cloud-gov/s3-broker/config"
 	"golang.org/x/exp/slices"
@@ -35,7 +33,7 @@ func (s *serviceNames) Set(value string) error {
 var servicesToTag serviceNames
 
 func run() error {
-	actionPtr := flag.String("action", "", "Action to take. Accepted options: 'reconcile-tags', 'reconcile-log-groups'")
+	actionPtr := flag.String("action", "", "Action to take. Accepted options: 'reconcile-tags'")
 	flag.Var(&servicesToTag, "service", "Specify AWS service whose instances should have tags updated. Accepted options: 's3'")
 	flag.Parse()
 
@@ -74,23 +72,11 @@ func run() error {
 		}
 
 		path, _ := os.Getwd()
-		c := catalog.InitCatalog(path)
+		c := s3.InitCatalog(path)
 
 		if slices.Contains(servicesToTag, "s3") {
 			s3Client := s3.New(sess)
-			err := tasksS3.ReconcileS3BucketTags(c, db, s3Client, tagManager)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	if *actionPtr == "reconcile-log-groups" {
-		logsClient := cloudwatchlogs.New(sess)
-
-		if slices.Contains(servicesToTag, "rds") {
-			rdsClient := awsRds.New(sess)
-			err := rds.ReconcileRDSCloudwatchLogGroups(logsClient, rdsClient, settings.DbNamePrefix, db)
+			err := tasksS3.ReconcileS3BucketTags(c, s3Client, tagManager)
 			if err != nil {
 				return err
 			}

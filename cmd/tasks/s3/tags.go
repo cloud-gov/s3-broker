@@ -10,9 +10,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	brokertags "github.com/cloud-gov/go-broker-tags"
-	. "github.com/cloud-gov/s3-broker/broker"
+	"github.com/cloud-gov/s3-broker/broker"
+	s3bucket "github.com/cloud-gov/s3-broker/cmd/tasks/s3"
 	task_tag "github.com/cloud-gov/s3-broker/cmd/tasks/tags"
-	"golang.org/x/text/message/catalog"
 )
 
 func getS3BucketTags(s3Client s3iface.S3API, bucketName string) ([]*s3.Tag, error) {
@@ -72,7 +72,7 @@ func processS3Bucket(s3Client s3iface.S3API, bucketName string, generatedTags []
 	return nil
 }
 
-func ReconcileS3BucketTags(catalog *catalog.Catalog, s3Client s3iface.S3API, tagManager brokertags.TagManager) error {
+func ReconcileS3BucketTags(catalog *broker.Catalog, s3Client s3iface.S3API, tagManager brokertags.TagManager) error {
 	output, err := s3Client.ListBuckets(&s3.ListBucketsInput{})
 	if err != nil {
 		return fmt.Errorf("error listing buckets: %w", err)
@@ -86,44 +86,42 @@ func ReconcileS3BucketTags(catalog *catalog.Catalog, s3Client s3iface.S3API, tag
 		if !strings.HasPrefix(bucketName, "cg-") {
 			continue
 		}
-
+		instanceUUID := strings.TrimPrefix(bucketName, "cg-")
 		taggingOutput, err := s3Client.GetBucketTagging(&s3.GetBucketTaggingInput{
 			Bucket: aws.String(bucketName),
 		})
 		if err != nil {
-			fmt.Printf(" Error getting tags: %s\n", err)
+			if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == "NoSuchTagSet" {
+				log.Printf("No tags found ofr bucket %s, skipping", &bucketName)
+			}
+			log.Printf(" Error getting tags for: %s: %s", &bucketName, err)
 		}
+
 		tags := make(map[string]string)
 		for _, tag := range taggingOutput.TagSet {
 			tags[*tag.Key] = *tag.Value
 		}
-		PlanGuid := ""
-		SpaceGUID := ""
-		OrganizationGUID := ""
-		if val, ok := tags["Plan ID"]; ok {
-			PlanGuid = val
-		} else {
-			fmt.Printf(" Plan ID not found for %s", bucketName)
+
+		planID, ok := tags["Plan ID"]
+		if !ok {
+			log.Printf(" Plan ID not found for %s", bucketName)
+			continue
+		}
+		spaceID, ok := tags["Space ID"]
+		if !ok {
+			log.Printf(" Space ID not found for %s", bucketName)
+			continue
+		}
+		organizationID, ok := tags["Organization ID"]
+		if !ok {
+			log.Printf(" Organization ID not found for %s", bucketName)
 			continue
 		}
 
-		if val, ok := tags["Space ID"]; ok {
-			SpaceGUID = val
-		} else {
-			fmt.Printf(" Space ID not found for %s", bucketName)
-			continue
-		}
-
-		if val, ok := tags["Organization ID"]; ok {
-			OrganizationGUID = val
-		} else {
-			fmt.Printf(" Organization ID not found for %s", bucketName)
-			continue
-		}
-
-		plan, err := catalog.FindServicePlan(PlanGuid)
+		plan, err := broker.FindServicePlan(planID)
 		if err != false {
-			return fmt.Errorf("error getting plan %s for bucket %s", PlanGuid, bucketName)
+			log.Printf("error getting plan %s for bucket %s", planID, bucketName)
+			continue
 		}
 
 		generatedTags, err := task_tag.GenerateTags(
@@ -131,17 +129,17 @@ func ReconcileS3BucketTags(catalog *catalog.Catalog, s3Client s3iface.S3API, tag
 			"S3",
 			plan,
 			brokertags.ResourceGUIDs{
-				InstanceGUID:     bucketInstance.Uuid,
-				SpaceGUID:        SpaceGUID,
-				OrganizationGUID: OrganizationGUID,
+				InstanceGUID:     instanceUUID,
+				SpaceGUID:        spaceID,
+				OrganizationGUID: organizationID,
 			},
 		)
 		if err != nil {
-			return fmt.Errorf("error generating new tags for bucket %s: %s", &bucketInstance.BucketName, err)
+			return fmt.Errorf("error generating new tags for bucket %s: %s", &bucketName, err)
 		}
 
 		S3Tags := s3bucket.ConvertTagsToS3Tags(generatedTags)
-		err = processS3Bucket(S3Client, bucketInstance.BucketName, S3Tags)
+		err = processS3Bucket(s3Client, bucketName, S3Tags)
 		if err != nil {
 			return err
 		}
