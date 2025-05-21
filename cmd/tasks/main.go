@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go/aws"
@@ -71,12 +70,12 @@ func run() error {
 			return fmt.Errorf("could not initialize tag manager: %s", err)
 		}
 
-		path, _ := os.Getwd()
-		c := s3.InitCatalog(path)
+		// path, _ := os.Getwd()
+		// c := s3.InitCatalog(path)
 
 		if slices.Contains(servicesToTag, "s3") {
 			s3Client := s3.New(sess)
-			err := tasksS3.ReconcileS3BucketTags(c, s3Client, tagManager)
+			err := tasksS3.ReconcileS3BucketTags(s3Client, tagManager)
 			if err != nil {
 				return err
 			}

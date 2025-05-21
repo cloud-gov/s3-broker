@@ -74,7 +74,7 @@ func processS3Bucket(s3Client s3iface.S3API, bucketName string, generatedTags []
 	return nil
 }
 
-func ReconcileS3BucketTags(catalog *broker.Catalog, s3Client s3iface.S3API, tagManager brokertags.TagManager) error {
+func ReconcileS3BucketTags(s3Client s3iface.S3API, tagManager brokertags.TagManager) error {
 	output, err := s3Client.ListBuckets(&s3.ListBucketsInput{})
 	if err != nil {
 		return fmt.Errorf("error listing buckets: %w", err)
