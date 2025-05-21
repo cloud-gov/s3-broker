@@ -88,22 +88,24 @@ func convertTagsToS3Tags(tags map[string]string) []*s3.Tag {
 }
 
 func ReconcileS3BucketTags(s3Client s3iface.S3API, tagManager brokertags.TagManager, cfClient *cf.Client) error {
-	output, err := s3Client.ListBuckets(&s3.ListBucketsInput{})
-	if err != nil {
-		return fmt.Errorf("error listing buckets: %w", err)
-	}
+	// output, err := s3Client.ListBuckets(&s3.ListBucketsInput{})
+	// if err != nil {
+	// 	return fmt.Errorf("error listing buckets: %w", err)
+	// }
 
-	for _, bucket := range output.Buckets {
+	bucketNames := []string{"development-cg-fde5dbf8-fc4d-4990-8f2d-9794ef6df065"}
+
+	for _, bucket := range bucketNames {
 		if bucket == nil || bucket.Name == nil {
 			continue
 		}
-		bucketName := *bucket.Name
+		bucketName := bucket
 
 		if !strings.HasPrefix(bucketName, "cg-") {
 			continue
 		}
 
-		instanceUUID := strings.TrimPrefix(bucketName, "cg-")
+		instanceUUID := strings.TrimPrefix(bucketName, "development-cg-")
 
 		taggingOutput, err := s3Client.GetBucketTagging(&s3.GetBucketTaggingInput{
 			Bucket: aws.String(bucketName),
