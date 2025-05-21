@@ -7,19 +7,15 @@ import (
 	"log"
 	"os"
 
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	awsRds "github.com/aws/aws-sdk-go/service/rds"
 	brokertags "github.com/cloud-gov/go-broker-tags"
-
-	"github.com/cloud-gov/aws-broker/cmd/tasks/rds"
-	tasksRds "github.com/cloud-gov/aws-broker/cmd/tasks/rds"
-
-	"github.com/18F/aws-broker/catalog"
-	"github.com/18F/aws-broker/config"
-	"github.com/18F/aws-broker/db"
-
+	. "github.com/cloud-gov/s3-broker"
+	tasksS3 "github.com/cloud-gov/s3-broker/cmd/tasks/s3"
+	"github.com/cloud-gov/s3-broker/config"
 	"golang.org/x/exp/slices"
 )
 
@@ -40,7 +36,7 @@ var servicesToTag serviceNames
 
 func run() error {
 	actionPtr := flag.String("action", "", "Action to take. Accepted options: 'reconcile-tags', 'reconcile-log-groups'")
-	flag.Var(&servicesToTag, "service", "Specify AWS service whose instances should have tags updated. Accepted options: 'rds', 'elasticache', 'elasticsearch', 'opensearch'")
+	flag.Var(&servicesToTag, "service", "Specify AWS service whose instances should have tags updated. Accepted options: 's3'")
 	flag.Parse()
 
 	if *actionPtr == "" {
@@ -56,11 +52,6 @@ func run() error {
 	// Load settings from environment
 	if err := settings.LoadFromEnv(); err != nil {
 		return fmt.Errorf("there was an error loading settings: %w", err)
-	}
-
-	db, err := db.InternalDBInit(settings.DbConfig)
-	if err != nil {
-		return fmt.Errorf("there was an error with the DB. Error: %s", err.Error())
 	}
 
 	sess, err := session.NewSession(&aws.Config{
@@ -85,11 +76,9 @@ func run() error {
 		path, _ := os.Getwd()
 		c := catalog.InitCatalog(path)
 
-		logsClient := cloudwatchlogs.New(sess)
-
 		if slices.Contains(servicesToTag, "s3") {
-			rdsClient := awsRds.New(sess)
-			err := tasksRds.ReconcileResourceTagsForAllRDSDatabases(c, db, rdsClient, logsClient, tagManager)
+			s3Client := s3.New(sess)
+			err := tasksS3.ReconcileS3BucketTags(c, db, s3Client, tagManager)
 			if err != nil {
 				return err
 			}

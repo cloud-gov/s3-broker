@@ -3,13 +3,15 @@ package s3
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	brokertags "github.com/cloud-gov/go-broker-tags"
-	"github.com/cloud-gov/s3-broker/cmd/tasks/tags"
+	. "github.com/cloud-gov/s3-broker/broker"
+	task_tag "github.com/cloud-gov/s3-broker/cmd/tasks/tags"
 	"golang.org/x/text/message/catalog"
 )
 
@@ -70,30 +72,68 @@ func processS3Bucket(s3Client s3iface.S3API, bucketName string, generatedTags []
 	return nil
 }
 
-func ReconcileS3BucketTags(catalog *catalog.Catalog, db *gorm.DB, s3Client s3iface.S3API, tagManager brokertags.TagManager) error {
-	rows, err := db.Model(&s3bucket.S3BucketInstance{}).Rows()
+func ReconcileS3BucketTags(catalog *catalog.Catalog, s3Client s3iface.S3API, tagManager brokertags.TagManager) error {
+	output, err := s3Client.ListBuckets(&s3.ListBucketsInput{})
 	if err != nil {
-		return err
+		return fmt.Errorf("error listing buckets: %w", err)
 	}
-	defer rows.Close()
 
-	for rows.Next() {
-		var bucketInstance s3bucket.S3BucketInstance
-		db.ScanRows(rows, &bucketInstance)
-
-		plan, _ := catalog.ElasticsearchService.FetchPlan(bucketInstance.PlanID)
-		if plan.Name == "" {
-			return fmt.Errorf("error getting plan %s for bucket %s", bucketInstance.PlanID, bucketInstance.BucketName)
+	for _, bucket := range output.Buckets {
+		if bucket == nil || bucket.Name == nil {
+			continue
+		}
+		bucketName := *bucket.Name
+		if !strings.HasPrefix(bucketName, "cg-") {
+			continue
 		}
 
-		generatedTags, err := tags.GenerateTags(
+		taggingOutput, err := s3Client.GetBucketTagging(&s3.GetBucketTaggingInput{
+			Bucket: aws.String(bucketName),
+		})
+		if err != nil {
+			fmt.Printf(" Error getting tags: %s\n", err)
+		}
+		tags := make(map[string]string)
+		for _, tag := range taggingOutput.TagSet {
+			tags[*tag.Key] = *tag.Value
+		}
+		PlanGuid := ""
+		SpaceGUID := ""
+		OrganizationGUID := ""
+		if val, ok := tags["Plan ID"]; ok {
+			PlanGuid = val
+		} else {
+			fmt.Printf(" Plan ID not found for %s", bucketName)
+			continue
+		}
+
+		if val, ok := tags["Space ID"]; ok {
+			SpaceGUID = val
+		} else {
+			fmt.Printf(" Space ID not found for %s", bucketName)
+			continue
+		}
+
+		if val, ok := tags["Organization ID"]; ok {
+			OrganizationGUID = val
+		} else {
+			fmt.Printf(" Organization ID not found for %s", bucketName)
+			continue
+		}
+
+		plan, err := catalog.FindServicePlan(PlanGuid)
+		if err != false {
+			return fmt.Errorf("error getting plan %s for bucket %s", PlanGuid, bucketName)
+		}
+
+		generatedTags, err := task_tag.GenerateTags(
 			tagManager,
-			catalog.S3Service.Name,
-			plan.Name,
+			"S3",
+			plan,
 			brokertags.ResourceGUIDs{
 				InstanceGUID:     bucketInstance.Uuid,
-				SpaceGUID:        bucketInstance.SpaceGUID,
-				OrganizationGUID: bucketInstance.OrganizationGUID,
+				SpaceGUID:        SpaceGUID,
+				OrganizationGUID: OrganizationGUID,
 			},
 		)
 		if err != nil {
