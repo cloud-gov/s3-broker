@@ -1,6 +1,8 @@
 package config_test
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -8,6 +10,11 @@ import (
 
 	"github.com/cloud-gov/s3-broker/broker"
 )
+
+func TestConfig(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Config test suite")
+}
 
 var _ = Describe("Config", func() {
 	var (
