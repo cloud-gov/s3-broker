@@ -1,10 +1,10 @@
-package main_test
+package config_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	. "github.com/cloud-gov/s3-broker"
+	. "github.com/cloud-gov/s3-broker/config"
 
 	"github.com/cloud-gov/s3-broker/broker"
 )
