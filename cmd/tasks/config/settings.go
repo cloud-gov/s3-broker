@@ -9,7 +9,6 @@ import (
 
 // Settings stores settings used to run the application
 type Settings struct {
-	EncryptionKey     string
 	Environment       string
 	Region            string
 	CfApiUrl          string
@@ -26,13 +25,6 @@ func (s *Settings) LoadFromEnv() error {
 		if os.Getenv(key) == "" {
 			return fmt.Errorf("must set environment variable %s", key)
 		}
-	}
-
-	// Load Encryption Key
-	if _, ok := os.LookupEnv("ENC_KEY"); ok {
-		s.EncryptionKey = os.Getenv("ENC_KEY")
-	} else {
-		return errors.New("an encryption key is required. Must specify ENC_KEY environment variable")
 	}
 
 	s.Environment = os.Getenv("ENVIRONMENT")

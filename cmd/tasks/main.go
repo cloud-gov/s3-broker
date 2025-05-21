@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	brokertags "github.com/cloud-gov/go-broker-tags"
-	s3Broker "github.com/cloud-gov/s3-broker"
+	config "github.com/cloud-gov/s3-broker/cmd/tasks/config"
 	tasksS3 "github.com/cloud-gov/s3-broker/cmd/tasks/s3"
 	cf "github.com/cloudfoundry/go-cfclient/v3/client"
 	cfconfig "github.com/cloudfoundry/go-cfclient/v3/config"
@@ -54,11 +54,6 @@ func run() error {
 		return errors.New("--service argument is required. Specify --service multiple times to update tags for multiple services")
 	}
 
-	config, err := s3Broker.LoadConfig(configFilePath)
-	if err != nil {
-		log.Fatalf("Error loading config file: %s", err)
-	}
-
 	var settings config.Settings
 
 	// Load settings from environment
@@ -96,9 +91,6 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("could not initialize tag manager: %s", err)
 		}
-
-		// path, _ := os.Getwd()
-		// c := s3.InitCatalog(path)
 
 		if slices.Contains(servicesToTag, "s3") {
 			s3Client := s3.New(sess)

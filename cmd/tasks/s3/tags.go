@@ -1,6 +1,7 @@
 package s3
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -10,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	brokertags "github.com/cloud-gov/go-broker-tags"
-	broker "github.com/cloud-gov/s3-broker/broker"
 	task_tag "github.com/cloud-gov/s3-broker/cmd/tasks/tags"
 	cf "github.com/cloudfoundry/go-cfclient/v3/client"
 )
@@ -110,9 +110,9 @@ func ReconcileS3BucketTags(s3Client s3iface.S3API, tagManager brokertags.TagMana
 		})
 		if err != nil {
 			if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == "NoSuchTagSet" {
-				log.Printf("No tags found for bucket %s, skipping", &bucketName)
+				log.Printf("no tags found for bucket %s, skipping", bucketName)
 			}
-			log.Printf(" Error getting tags for: %s: %s", &bucketName, err)
+			log.Printf("error getting tags for: %s: %s", bucketName, err)
 			continue
 		}
 
@@ -121,36 +121,25 @@ func ReconcileS3BucketTags(s3Client s3iface.S3API, tagManager brokertags.TagMana
 			tags[*tag.Key] = *tag.Value
 		}
 
-		planID, ok := tags["Plan ID"]
-		if !ok {
-			log.Printf(" Plan ID not found for %s", bucketName)
+		instance, err := cfClient.ServiceInstances.Get(context.Background(), instanceUUID)
+		if err != nil {
+			log.Printf("Could not find service instance for GUID %s", instanceUUID)
 			continue
 		}
-		spaceID, ok := tags["Space ID"]
-		if !ok {
-			log.Printf(" Space ID not found for %s", bucketName)
-			continue
-		}
-		organizationID, ok := tags["Organization ID"]
-		if !ok {
-			log.Printf(" Organization ID not found for %s", bucketName)
-			continue
-		}
+		planGUID := instance.Relationships.ServicePlan.Data.GUID
 
-		plan, found := broker.FindServicePlan(planID)
-		if !found {
-			log.Printf("error getting plan %s for bucket %s", planID, bucketName)
+		plan, err := cfClient.ServicePlans.Get(context.Background(), planGUID)
+		if err != nil {
+			log.Printf("Could not find service plan for instance %s", instanceUUID)
 			continue
 		}
 
 		generatedTags, err := task_tag.GenerateTags(
 			tagManager,
 			"S3",
-			plan,
+			plan.Name,
 			brokertags.ResourceGUIDs{
-				InstanceGUID:     instanceUUID,
-				SpaceGUID:        spaceID,
-				OrganizationGUID: organizationID,
+				InstanceGUID: instanceUUID,
 			},
 		)
 		if err != nil {
