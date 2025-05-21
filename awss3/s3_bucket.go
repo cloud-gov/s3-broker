@@ -222,7 +222,7 @@ func (s *S3Bucket) checkIsPublicAccessBlockDeleted(bucketName string) (bool, err
 }
 
 func (s *S3Bucket) Modify(bucketName string, bucketDetails BucketDetails) error {
-	// TODO Implement modifx
+	// TODO Implement modify
 	return nil
 }
 
