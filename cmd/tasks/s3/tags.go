@@ -36,8 +36,10 @@ func doS3BucketTagsContainGeneratedTags(existingTags []*s3.Tag, generatedTags []
 		}
 		found := false
 		for _, t := range existingTags {
-			found = true
-			break
+			if *v.Key == *t.Key && *v.Value == *t.Value {
+				found = true
+				break
+			}
 		}
 		if !found {
 			return false
@@ -92,9 +94,10 @@ func ReconcileS3BucketTags(catalog *broker.Catalog, s3Client s3iface.S3API, tagM
 		})
 		if err != nil {
 			if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == "NoSuchTagSet" {
-				log.Printf("No tags found ofr bucket %s, skipping", &bucketName)
+				log.Printf("No tags found for bucket %s, skipping", &bucketName)
 			}
 			log.Printf(" Error getting tags for: %s: %s", &bucketName, err)
+			continue
 		}
 
 		tags := make(map[string]string)
@@ -118,8 +121,8 @@ func ReconcileS3BucketTags(catalog *broker.Catalog, s3Client s3iface.S3API, tagM
 			continue
 		}
 
-		plan, err := broker.FindServicePlan(planID)
-		if err != false {
+		plan, found := broker.FindServicePlan(planID)
+		if !found {
 			log.Printf("error getting plan %s for bucket %s", planID, bucketName)
 			continue
 		}
@@ -135,7 +138,7 @@ func ReconcileS3BucketTags(catalog *broker.Catalog, s3Client s3iface.S3API, tagM
 			},
 		)
 		if err != nil {
-			return fmt.Errorf("error generating new tags for bucket %s: %s", &bucketName, err)
+			return fmt.Errorf("error generating new tags for bucket %s: %s", bucketName, err)
 		}
 
 		S3Tags := s3bucket.ConvertTagsToS3Tags(generatedTags)
