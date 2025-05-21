@@ -21,6 +21,7 @@ import (
 	"github.com/cloud-gov/s3-broker/awsiam"
 	"github.com/cloud-gov/s3-broker/awss3"
 	"github.com/cloud-gov/s3-broker/broker"
+	brokerConfig "github.com/cloud-gov/s3-broker/config"
 )
 
 var (
@@ -55,7 +56,7 @@ func buildLogger(logLevel string) lager.Logger {
 func main() {
 	flag.Parse()
 
-	config, err := LoadConfig(configFilePath)
+	config, err := brokerConfig.LoadConfig(configFilePath)
 	if err != nil {
 		log.Fatalf("Error loading config file: %s", err)
 	}
