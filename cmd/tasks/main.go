@@ -17,7 +17,7 @@ import (
 
 func run() error {
 	actionPtr := flag.String("action", "", "Action to take. Accepted options: 'reconcile-tags'")
-
+	flag.Parse()
 	var settings config.Settings
 
 	// Load settings from environment
