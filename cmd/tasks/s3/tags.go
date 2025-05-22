@@ -92,16 +92,18 @@ func ReconcileS3BucketTags(s3Client s3iface.S3API, tagManager brokertags.TagMana
 	// if err != nil {
 	// 	return fmt.Errorf("error listing buckets: %w", err)
 	// }
-
+	log.Println("Reconciling")
 	bucketNames := []string{"development-cg-fde5dbf8-fc4d-4990-8f2d-9794ef6df065"}
 
 	for _, bucket := range bucketNames {
 		if bucket == ""{ //|| bucket.Name == nil
+			log.Println("jason, This bucket is empty")
 			continue
 		}
 		bucketName := bucket
 
 		if !strings.HasPrefix(bucketName, "cg-") {
+			log.Println("Jason this doesn't have cg-")
 			continue
 		}
 
