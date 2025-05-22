@@ -60,7 +60,7 @@ func run() error {
 	if err := settings.LoadFromEnv(); err != nil {
 		return fmt.Errorf("there was an error loading settings: %w", err)
 	}
-
+	log.Println("Jason1")
 	var client *cf.Client
 	if settings.CfApiUrl != "" && settings.CfApiClientId != "" && settings.CfApiClientSecret != "" {
 		cfConfig, err := cfconfig.New(settings.CfApiUrl, cfconfig.ClientCredentials(settings.CfApiClientId, settings.CfApiClientSecret))
@@ -72,7 +72,7 @@ func run() error {
 			log.Fatalf("Error creating CF client: %s", err)
 		}
 	}
-
+	log.Println("Jason2")
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(settings.Region),
 	})
@@ -80,6 +80,7 @@ func run() error {
 		return fmt.Errorf("could not initialize session: %s", err)
 	}
 
+	log.Println("Jason3")
 	if *actionPtr == "reconcile-tags" {
 		tagManager, err := brokertags.NewCFTagManager(
 			"s3 broker",
