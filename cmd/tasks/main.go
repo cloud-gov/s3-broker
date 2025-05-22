@@ -45,7 +45,6 @@ func run() error {
 
 
 	if *actionPtr == "reconcile-tags" {
-		log.Println("far")
 		tagManager, err := brokertags.NewCFTagManager(
 			"s3 broker",
 			settings.Environment,
@@ -56,7 +55,6 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("could not initialize tag manager: %s", err)
 		}
-		log.Println("near")
 		s3Client := s3.New(sess)
 		err = tasksS3.ReconcileS3BucketTags(s3Client, tagManager, client, settings.Environment)
 		if err != nil {
