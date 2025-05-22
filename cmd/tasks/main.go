@@ -92,7 +92,7 @@ func run() error {
 
 		if slices.Contains(servicesToTag, "s3") {
 			s3Client := s3.New(sess)
-			err := tasksS3.ReconcileS3BucketTags(s3Client, tagManager, client)
+			err := tasksS3.ReconcileS3BucketTags(s3Client, tagManager, client, settings.Environment)
 			if err != nil {
 				return err
 			}

@@ -87,8 +87,8 @@ func convertTagsToS3Tags(tags map[string]string) []*s3.Tag {
 	return s3Tags
 }
 
-func ReconcileS3BucketTags(s3Client s3iface.S3API, tagManager brokertags.TagManager, cfClient *cf.Client) error {
-	log.Println("Reconciling")
+func ReconcileS3BucketTags(s3Client s3iface.S3API, tagManager brokertags.TagManager, cfClient *cf.Client, string Environment) error {
+	log.Println(Environment)
 	output, err := s3Client.ListBuckets(&s3.ListBucketsInput{})
 	if err != nil {
 		return fmt.Errorf("error listing buckets: %w", err)
