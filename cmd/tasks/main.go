@@ -18,41 +18,8 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-type serviceNames []string
-
-// String is an implementation of the flag.Value interface
-func (s *serviceNames) String() string {
-	return fmt.Sprintf("%v", *s)
-}
-
-// Set is an implementation of the flag.Value interface
-func (s *serviceNames) Set(value string) error {
-	*s = append(*s, value)
-	return nil
-}
-
-var servicesToTag serviceNames
-
-var (
-	configFilePath string
-)
-
-func init() {
-	flag.StringVar(&configFilePath, "config", "", "Location of the config file")
-}
-
 func run() error {
 	actionPtr := flag.String("action", "", "Action to take. Accepted options: 'reconcile-tags'")
-	flag.Var(&servicesToTag, "service", "Specify AWS service whose instances should have tags updated. Accepted options: 's3'")
-	flag.Parse()
-
-	if *actionPtr == "" {
-		log.Fatal("--action flag is required")
-	}
-
-	if len(servicesToTag) == 0 {
-		return errors.New("--service argument is required. Specify --service multiple times to update tags for multiple services")
-	}
 
 	var settings config.Settings
 
@@ -90,12 +57,10 @@ func run() error {
 			return fmt.Errorf("could not initialize tag manager: %s", err)
 		}
 
-		if slices.Contains(servicesToTag, "s3") {
-			s3Client := s3.New(sess)
-			err := tasksS3.ReconcileS3BucketTags(s3Client, tagManager, client, settings.Environment)
-			if err != nil {
-				return err
-			}
+		s3Client := s3.New(sess)
+		err := tasksS3.ReconcileS3BucketTags(s3Client, tagManager, client, settings.Environment)
+		if err != nil {
+			return err
 		}
 	}
 
