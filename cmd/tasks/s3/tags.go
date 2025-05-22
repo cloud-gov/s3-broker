@@ -96,27 +96,21 @@ func ReconcileS3BucketTags(s3Client s3iface.S3API, tagManager brokertags.TagMana
 
 	for _, bucket := range output.Buckets {
 		if bucket == nil || bucket.Name == nil {
-			log.Println("This bucket is empty %s", bucket)
 			continue
 		}
 		bucketName := *bucket.Name
 
 		if environment != "production" {
-			if !strings.HasPrefix(bucketName, environment + "-cg-")
-			{
+			if !strings.HasPrefix(bucketName, environment + "-cg-") {
 				continue
 			}
 			instanceUUID := strings.TrimPrefix(bucketName, environment + "-cg-")
-		}
-		else if environment == "production" {
-			if !strings.HasPrefix(bucketName, "cg-")
-			{
+		} else if environment == "production" {
+			if !strings.HasPrefix(bucketName, "cg-") {
 				continue
 			}
 			instanceUUID := strings.TrimPrefix(bucketName, "cg-")
-		}
-		else
-		{
+		} else {
 			continue
 		}
 
