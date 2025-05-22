@@ -97,15 +97,15 @@ func ReconcileS3BucketTags(s3Client s3iface.S3API, tagManager brokertags.TagMana
 
 	for _, bucket := range bucketNames {
 		if bucket == ""{ //|| bucket.Name == nil
-			log.Println("jason, This bucket is empty")
+			log.Println("This bucket is empty %s", bucketName)
 			continue
 		}
 		bucketName := bucket
 
-		if !strings.HasPrefix(bucketName, "cg-") {
-			log.Println("Jason this doesn't have cg-")
-			continue
-		}
+		// if !strings.HasPrefix(bucketName, "cg-") {
+		// 	log.Println("Jason this doesn't have cg-")
+		// 	continue
+		// }
 
 		instanceUUID := strings.TrimPrefix(bucketName, "development-cg-")
 
