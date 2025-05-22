@@ -97,7 +97,7 @@ func ReconcileS3BucketTags(s3Client s3iface.S3API, tagManager brokertags.TagMana
 
 	for _, bucket := range bucketNames {
 		if bucket == ""{ //|| bucket.Name == nil
-			log.Println("This bucket is empty %s", bucketName)
+			log.Println("This bucket is empty %s", bucket)
 			continue
 		}
 		bucketName := bucket
