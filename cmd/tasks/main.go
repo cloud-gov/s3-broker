@@ -35,12 +35,14 @@ func run() error {
 			log.Fatalf("Error creating CF client: %s", err)
 		}
 	}
+	log.Println("far")
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(settings.Region),
 	})
 	if err != nil {
 		return fmt.Errorf("could not initialize session: %s", err)
 	}
+	log.Println("near)
 
 	if *actionPtr == "reconcile-tags" {
 		tagManager, err := brokertags.NewCFTagManager(
