@@ -96,7 +96,7 @@ func ReconcileS3BucketTags(s3Client s3iface.S3API, tagManager brokertags.TagMana
 	bucketNames := []string{"development-cg-fde5dbf8-fc4d-4990-8f2d-9794ef6df065"}
 
 	for _, bucket := range bucketNames {
-		if bucket == nil { //|| bucket.Name == nil
+		if bucket == ""{ //|| bucket.Name == nil
 			continue
 		}
 		bucketName := bucket
