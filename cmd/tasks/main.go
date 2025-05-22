@@ -42,7 +42,7 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("could not initialize session: %s", err)
 	}
-	log.Println("near)
+	log.Println("near")
 
 	if *actionPtr == "reconcile-tags" {
 		tagManager, err := brokertags.NewCFTagManager(
