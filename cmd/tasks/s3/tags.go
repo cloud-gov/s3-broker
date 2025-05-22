@@ -88,26 +88,24 @@ func convertTagsToS3Tags(tags map[string]string) []*s3.Tag {
 }
 
 func ReconcileS3BucketTags(s3Client s3iface.S3API, tagManager brokertags.TagManager, cfClient *cf.Client) error {
-	// output, err := s3Client.ListBuckets(&s3.ListBucketsInput{})
-	// if err != nil {
-	// 	return fmt.Errorf("error listing buckets: %w", err)
-	// }
 	log.Println("Reconciling")
-	bucketNames := []string{"development-cg-fde5dbf8-fc4d-4990-8f2d-9794ef6df065"}
+	output, err := s3Client.ListBuckets(&s3.ListBucketsInput{})
+	if err != nil {
+		return fmt.Errorf("error listing buckets: %w", err)
+	}
 
-	for _, bucket := range bucketNames {
-		if bucket == ""{ //|| bucket.Name == nil
+	for _, bucket := range output.Buckets {
+		if bucket == nil || bucket.Name == nil {
 			log.Println("This bucket is empty %s", bucket)
 			continue
 		}
-		bucketName := bucket
+		bucketName := *bucket.Name
 
-		// if !strings.HasPrefix(bucketName, "cg-") {
-		// 	log.Println("Jason this doesn't have cg-")
-		// 	continue
-		// }
+		if !strings.HasPrefix(bucketName, "cg-") {
+			continue
+		}
 
-		instanceUUID := strings.TrimPrefix(bucketName, "development-cg-")
+		instanceUUID := strings.TrimPrefix(bucketName, "cg-")
 
 		taggingOutput, err := s3Client.GetBucketTagging(&s3.GetBucketTaggingInput{
 			Bucket: aws.String(bucketName),
