@@ -101,11 +101,18 @@ func ReconcileS3BucketTags(s3Client s3iface.S3API, tagManager brokertags.TagMana
 		}
 		bucketName := *bucket.Name
 
-		if !strings.HasPrefix(bucketName, "cg-") {
+		if !strings.HasPrefix(bucketName, Environment + "cg-") {
 			continue
 		}
 
-		instanceUUID := strings.TrimPrefix(bucketName, "cg-")
+		instanceUUID := strings.TrimPrefix(bucketName, Environment + "cg-")
+
+		if Environment == ""{
+			continue
+		}
+		if 1 == 1 {
+			continue
+		}
 
 		taggingOutput, err := s3Client.GetBucketTagging(&s3.GetBucketTaggingInput{
 			Bucket: aws.String(bucketName),
