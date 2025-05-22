@@ -106,7 +106,7 @@ func ReconcileS3BucketTags(s3Client s3iface.S3API, tagManager brokertags.TagMana
 		        bucketPrefix = environment + "-" + bucketPrefix
 		} 
 		
-		if !strings.HasPrefix(bucketName, environment+"-cg-") {
+		if !strings.HasPrefix(bucketName, bucketPrefix) {
 			continue
 		}
 		
