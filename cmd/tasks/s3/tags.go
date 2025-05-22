@@ -87,7 +87,7 @@ func convertTagsToS3Tags(tags map[string]string) []*s3.Tag {
 	return s3Tags
 }
 
-func ReconcileS3BucketTags(s3Client s3iface.S3API, tagManager brokertags.TagManager, cfClient *cf.Client, Environment string) error {
+func ReconcileS3BucketTags(s3Client s3iface.S3API, tagManager brokertags.TagManager, cfClient *cf.Client, environment string) error {
 	log.Println("Reconciling")
 	output, err := s3Client.ListBuckets(&s3.ListBucketsInput{})
 	if err != nil {
@@ -101,14 +101,14 @@ func ReconcileS3BucketTags(s3Client s3iface.S3API, tagManager brokertags.TagMana
 		}
 		bucketName := *bucket.Name
 
-		if Environment != "production" {
-		if !strings.HasPrefix(bucketName, Environment + "-cg-") {
+		if environment != "production" {
+		if !strings.HasPrefix(bucketName, environment + "-cg-") {
 			continue
 		}
 
-		instanceUUID := strings.TrimPrefix(bucketName, Environment + "-cg-")
+		instanceUUID := strings.TrimPrefix(bucketName, environment + "-cg-")
 		}
-		elif Environment == "production" {
+		else if environment == "production" {
 			if !strings.HasPrefix(bucketName, "cg-") {
 			continue
 		}
