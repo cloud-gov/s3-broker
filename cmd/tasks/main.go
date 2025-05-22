@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -14,8 +13,6 @@ import (
 	tasksS3 "github.com/cloud-gov/s3-broker/cmd/tasks/s3"
 	cf "github.com/cloudfoundry/go-cfclient/v3/client"
 	cfconfig "github.com/cloudfoundry/go-cfclient/v3/config"
-
-	"golang.org/x/exp/slices"
 )
 
 func run() error {
@@ -58,7 +55,7 @@ func run() error {
 		}
 
 		s3Client := s3.New(sess)
-		err := tasksS3.ReconcileS3BucketTags(s3Client, tagManager, client, settings.Environment)
+		err = tasksS3.ReconcileS3BucketTags(s3Client, tagManager, client, settings.Environment)
 		if err != nil {
 			return err
 		}
