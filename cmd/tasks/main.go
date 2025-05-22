@@ -35,16 +35,17 @@ func run() error {
 			log.Fatalf("Error creating CF client: %s", err)
 		}
 	}
-	log.Println("far")
+
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(settings.Region),
 	})
 	if err != nil {
 		return fmt.Errorf("could not initialize session: %s", err)
 	}
-	log.Println("near")
+
 
 	if *actionPtr == "reconcile-tags" {
+		log.Println("far")
 		tagManager, err := brokertags.NewCFTagManager(
 			"s3 broker",
 			settings.Environment,
@@ -55,7 +56,7 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("could not initialize tag manager: %s", err)
 		}
-
+		log.Println("near")
 		s3Client := s3.New(sess)
 		err = tasksS3.ReconcileS3BucketTags(s3Client, tagManager, client, settings.Environment)
 		if err != nil {
