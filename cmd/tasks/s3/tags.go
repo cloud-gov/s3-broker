@@ -100,33 +100,14 @@ func ReconcileS3BucketTags(s3Client s3iface.S3API, tagManager brokertags.TagMana
 		}
 		bucketName := *bucket.Name
 
-		var instanceUUID string
-                bucketPrefix := "cg-"
+		bucketPrefix := "cg-"
 		if environment != "production" {
-		        bucketPrefix = environment + "-" + bucketPrefix
-		} 
-		
+			bucketPrefix = environment + "-" + bucketPrefix
+		}
 		if !strings.HasPrefix(bucketName, bucketPrefix) {
 			continue
 		}
-		
-		instanceUUID = strings.TrimPrefix(bucketName, bucketPrefix)
-
-		taggingOutput, err := s3Client.GetBucketTagging(&s3.GetBucketTaggingInput{
-			Bucket: aws.String(bucketName),
-		})
-		if err != nil {
-			if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == "NoSuchTagSet" {
-				log.Printf("no tags found for bucket %s, skipping", bucketName)
-			}
-			log.Printf("error getting tags for: %s: %s", bucketName, err)
-			continue
-		}
-
-		tags := make(map[string]string)
-		for _, tag := range taggingOutput.TagSet {
-			tags[*tag.Key] = *tag.Value
-		}
+		instanceUUID := strings.TrimPrefix(bucketName, bucketPrefix)
 
 		instance, err := cfClient.ServiceInstances.Get(context.Background(), instanceUUID)
 		if err != nil {
