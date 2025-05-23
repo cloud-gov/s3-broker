@@ -123,12 +123,13 @@ func ReconcileS3BucketTags(s3Client s3iface.S3API, tagManager brokertags.TagMana
 				log.Printf("no tags found for bucket %s, skipping", bucketName)
 			}
 			log.Printf("error getting tags for: %s: %s", bucketName, err)
-			continue
 		}
 
 		tags := make(map[string]string)
-		for _, tag := range taggingOutput.TagSet {
-			tags[*tag.Key] = *tag.Value
+		if taggingOutput != nil {
+			for _, tag := range taggingOutput.TagSet {
+				tags[*tag.Key] = *tag.Value
+			}
 		}
 
 		instance, err := cfClient.ServiceInstances.Get(context.Background(), instanceUUID)
