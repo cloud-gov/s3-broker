@@ -100,20 +100,14 @@ func ReconcileS3BucketTags(s3Client s3iface.S3API, tagManager brokertags.TagMana
 		}
 		bucketName := *bucket.Name
 
-		var instanceUUID string
+		bucketPrefix := "cg-"
 		if environment != "production" {
-			if !strings.HasPrefix(bucketName, environment+"-cg-") {
-				continue
-			}
-			instanceUUID = strings.TrimPrefix(bucketName, environment+"-cg-")
-		} else if environment == "production" {
-			if !strings.HasPrefix(bucketName, "cg-") {
-				continue
-			}
-			instanceUUID = strings.TrimPrefix(bucketName, "cg-")
-		} else {
+			bucketPrefix = environment + "-" + bucketPrefix
+		}
+		if !strings.HasPrefix(bucketName, bucketPrefix) {
 			continue
 		}
+		instanceUUID := strings.TrimPrefix(bucketName, bucketPrefix)
 
 
 		instance, err := cfClient.ServiceInstances.Get(context.Background(), instanceUUID)
