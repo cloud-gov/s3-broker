@@ -109,7 +109,6 @@ func ReconcileS3BucketTags(s3Client s3iface.S3API, tagManager brokertags.TagMana
 		}
 		instanceUUID := strings.TrimPrefix(bucketName, bucketPrefix)
 
-
 		instance, err := cfClient.ServiceInstances.Get(context.Background(), instanceUUID)
 		if err != nil {
 			log.Printf("Could not find service instance for GUID %s", instanceUUID)
