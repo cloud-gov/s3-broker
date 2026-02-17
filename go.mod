@@ -8,7 +8,7 @@ require (
 	code.cloudfoundry.org/lager/v3 v3.0.2
 	github.com/aws/aws-sdk-go v1.55.5
 	github.com/cloud-gov/go-broker-tags v0.0.0-20240112192542-8f1bb5859679
-	github.com/cloudfoundry-community/go-cfclient/v3 v3.0.0-alpha.6
+	github.com/cloudfoundry/go-cfclient/v3 v3.0.0-alpha.18
 	github.com/google/go-cmp v0.6.0
 	github.com/onsi/ginkgo/v2 v2.13.0
 	github.com/onsi/gomega v1.28.0
@@ -18,6 +18,7 @@ require (
 )
 
 require (
+	github.com/cloudfoundry-community/go-cfclient/v3 v3.0.0-alpha.6 // indirect
 	github.com/codegangsta/inject v0.0.0-20150114235600-33e0aa1cb7c0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-chi/chi/v5 v5.2.2 // indirect
@@ -34,9 +35,9 @@ require (
 	github.com/pborman/uuid v1.2.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/stretchr/testify v1.8.4 // indirect
+	github.com/stretchr/testify v1.11.1 // indirect
 	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/oauth2 v0.27.0 // indirect
+	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect

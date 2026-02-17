@@ -14,8 +14,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	brokertags "github.com/cloud-gov/go-broker-tags"
-	cf "github.com/cloudfoundry-community/go-cfclient/v3/client"
-	cfconfig "github.com/cloudfoundry-community/go-cfclient/v3/config"
+	cf "github.com/cloudfoundry/go-cfclient/v3/client"
+	cfconfig "github.com/cloudfoundry/go-cfclient/v3/config"
 	"github.com/pivotal-cf/brokerapi/v10"
 
 	"github.com/cloud-gov/s3-broker/awsiam"
@@ -87,7 +87,7 @@ func main() {
 
 	var client *cf.Client
 	if config.CFConfig != nil {
-		cfConfig, err := cfconfig.NewClientSecret(config.CFConfig.ApiAddress, config.CFConfig.ClientID, config.CFConfig.ClientSecret)
+		cfConfig, err := cfconfig.New(config.CFConfig.ApiAddress, cfconfig.ClientCredentials(config.CFConfig.ClientID, config.CFConfig.ClientSecret))
 		if err != nil {
 			log.Fatalf("Error creating CF config: %s", err)
 		}

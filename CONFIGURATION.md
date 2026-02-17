@@ -10,7 +10,7 @@ A sample configuration can be found at [config-sample.yml](https://github.com/cl
 | username  |    Y     | String | Broker Auth Username                                                                                                 |
 | password  |    Y     | String | Broker Auth Password                                                                                                 |
 | s3_config |    Y     | Hash   | [S3 Broker configuration](https://github.com/cloud-gov/s3-broker/blob/main/CONFIGURATION.md#s3-broker-configuration) |
-| cf_config |    N     | Hash   | [Cloud Foundry configuration](https://godoc.org/github.com/cloudfoundry-community/go-cfclient#Config)                |
+| cf_config |    N     | Hash   | [Cloud Foundry configuration](https://pkg.go.dev/github.com/cloudfoundry/go-cfclient/v3@v3.0.0-alpha.18/config#Config)                |
 
 ## S3 Broker Configuration
 
