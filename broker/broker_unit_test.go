@@ -233,7 +233,7 @@ func (u *mockUser) DeletePolicy(policyARN string) error {
 	if u.deleteUserPolicyErr != nil {
 		return u.deleteUserPolicyErr
 	}
-	if u.policies == nil || len(u.policies) == 0 {
+	if len(u.policies) == 0 {
 		return errors.New("not found")
 	}
 	idx := slices.Index(u.policies, policyARN)
@@ -367,7 +367,7 @@ func TestCreateBucket(t *testing.T) {
 			}
 
 			if !cmp.Equal(details, test.expectedDetails) {
-				t.Errorf(cmp.Diff(details, test.expectedDetails))
+				t.Error(cmp.Diff(details, test.expectedDetails))
 			}
 		})
 	}
@@ -573,17 +573,17 @@ func TestUnbind(t *testing.T) {
 				false,
 			)
 			if !cmp.Equal(test.expectUnbindSpec, unbindSpec) {
-				t.Fatalf(cmp.Diff(unbindSpec, test.expectUnbindSpec))
+				t.Fatal(cmp.Diff(unbindSpec, test.expectUnbindSpec))
 			}
 			if user, ok := test.broker.user.(*mockUser); ok {
 				if !cmp.Equal(test.expectAccessKeys, user.accessKeys) {
-					t.Fatalf(cmp.Diff(user.accessKeys, test.expectAccessKeys))
+					t.Fatal(cmp.Diff(user.accessKeys, test.expectAccessKeys))
 				}
 				if !cmp.Equal(test.expectDetachedPolicyArns, user.detachedPolicyArns) {
-					t.Fatalf(cmp.Diff(user.detachedPolicyArns, test.expectDetachedPolicyArns))
+					t.Fatal(cmp.Diff(user.detachedPolicyArns, test.expectDetachedPolicyArns))
 				}
 				if !cmp.Equal(test.expectPolicyARNs, user.policies) {
-					t.Fatalf(cmp.Diff(user.policies, test.expectPolicyARNs))
+					t.Fatal(cmp.Diff(user.policies, test.expectPolicyARNs))
 				}
 			}
 			if err != test.expectedErr {
@@ -828,7 +828,7 @@ func TestBind(t *testing.T) {
 
 			// assert: outputs
 			if !cmp.Equal(tc.expectBinding, binding) {
-				t.Fatalf(cmp.Diff(binding, tc.expectBinding))
+				t.Fatal(cmp.Diff(binding, tc.expectBinding))
 			}
 			if !errors.Is(tc.expectErr, err) {
 				t.Fatalf("expected err %s, got %s", tc.expectErr, err)
@@ -837,13 +837,13 @@ func TestBind(t *testing.T) {
 			// assert: side effects
 			if user, ok := tc.broker.user.(*mockUser); ok {
 				if tc.expectUserExists != user.exists {
-					t.Fatalf(cmp.Diff(user.exists, tc.expectUserExists))
+					t.Fatal(cmp.Diff(user.exists, tc.expectUserExists))
 				}
 				if !cmp.Equal(tc.expectAccessKeys, user.accessKeys) {
-					t.Fatalf(cmp.Diff(user.accessKeys, tc.expectAccessKeys))
+					t.Fatal(cmp.Diff(user.accessKeys, tc.expectAccessKeys))
 				}
 				if !cmp.Equal(tc.expectPolicies, user.policies) {
-					t.Fatalf(cmp.Diff(user.policies, tc.expectPolicies))
+					t.Fatal(cmp.Diff(user.policies, tc.expectPolicies))
 				}
 			}
 		})
