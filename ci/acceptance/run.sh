@@ -20,9 +20,11 @@ cf set-env "${APP_NAME}" ADDITIONAL_INSTANCE_NAME "${ADDITIONAL_INSTANCE_NAME:-}
 cf set-env "${APP_NAME}" ENCRYPTION "${ENCRYPTION:-""}"
 cf create-service "${SERVICE_NAME}" "${PLAN_NAME}" "${SERVICE_INSTANCE_NAME}"
 
-if [[ -n "$ADDITIONAL_INSTANCE_NAME" ]]; then
-  cf create-service "${SERVICE_NAME}" "${PLAN_NAME}" "${ADDITIONAL_INSTANCE_NAME}"
-  cf bind-service "${APP_NAME}" "${SERVICE_INSTANCE_NAME}" -c '{"additional_instances": ["'"$ADDITIONAL_INSTANCE_NAME"'"]}'
+if [ -z "${ADDITIONAL_INSTANCE_NAME+x}" ]; then
+  if [[ -n "$ADDITIONAL_INSTANCE_NAME" ]]; then
+    cf create-service "${SERVICE_NAME}" "${PLAN_NAME}" "${ADDITIONAL_INSTANCE_NAME}"
+    cf bind-service "${APP_NAME}" "${SERVICE_INSTANCE_NAME}" -c '{"additional_instances": ["'"$ADDITIONAL_INSTANCE_NAME"'"]}'
+  fi
 else
   cf bind-service "${APP_NAME}" "${SERVICE_INSTANCE_NAME}"
 fi
