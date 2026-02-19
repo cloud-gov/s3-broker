@@ -44,4 +44,6 @@ cf delete-service-key -f "$SERVICE_INSTANCE_NAME" "${SERVICE_INSTANCE_NAME}-serv
 
 cf delete -f "$APP_NAME"
 cf delete-service -f "$SERVICE_INSTANCE_NAME"
-
+if [[ -n "$ADDITIONAL_INSTANCE_NAME" ]]; then
+  cf delete-service -f "$ADDITIONAL_INSTANCE_NAME"
+fi
