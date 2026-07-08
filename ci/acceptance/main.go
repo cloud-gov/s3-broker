@@ -205,6 +205,7 @@ func testDeleteNonEmptyBucket(bucket string, svc *s3.S3) error {
 	if awsErr, ok := deleteErr.(awserr.Error); !ok || awsErr.Code() != "BucketNotEmpty" {
 		return fmt.Errorf("testDeleteNonEmptyBucket: expected BucketNotEmpty error; got: %v", deleteErr)
 	}
+	log.Printf("testDeleteNonEmptyBucket: PASS — bucket %q correctly rejected deletion while non-empty", bucket)
 
 	// Remove the object so the bucket can be deleted.
 	if _, err := svc.DeleteObject(&s3.DeleteObjectInput{
@@ -228,6 +229,7 @@ func testDeleteNonEmptyBucket(bucket string, svc *s3.S3) error {
 	}); err != nil {
 		return fmt.Errorf("testDeleteNonEmptyBucket: delete empty bucket: %w", err)
 	}
+	log.Printf("testDeleteNonEmptyBucket: PASS — bucket %q deleted successfully after object removal", bucket)
 
 	// Re-create the bucket so subsequent tests continue to work.
 	if _, err := svc.CreateBucket(&s3.CreateBucketInput{
