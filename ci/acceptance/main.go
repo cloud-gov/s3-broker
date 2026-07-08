@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -126,6 +127,16 @@ func testBucket(bucket string, svc *s3.S3) error {
 		return fmt.Errorf("expected code %d; got %d", expectedCode, resp.StatusCode)
 	}
 
+	// Test that deleting a non-empty bucket is rejected, then clean up and delete it.
+	// Only run when explicitly requested; the test deletes and re-creates the bucket,
+	// which would strip broker-applied settings (public access, encryption) and break
+	// other jobs that check for those settings.
+	if os.Getenv("TEST_NONEMPTY_DELETE") == "true" {
+		if err := testDeleteNonEmptyBucket(bucket, svc); err != nil {
+			return err
+		}
+	}
+
 	// Test delete object
 	if _, err = svc.DeleteObject(&s3.DeleteObjectInput{
 		Bucket: aws.String(creds["bucket"].(string)),
@@ -160,6 +171,69 @@ func testBucket(bucket string, svc *s3.S3) error {
 		if !reflect.DeepEqual(expectedConfig, *encryptionOutput.ServerSideEncryptionConfiguration) {
 			return fmt.Errorf("expected encryption config %+v; got %+v", expectedConfig, encryptionOutput.ServerSideEncryptionConfiguration)
 		}
+	}
+
+	return nil
+}
+
+// testDeleteNonEmptyBucket verifies that:
+//  1. Attempting to delete a bucket that contains an object fails with a
+//     BucketNotEmpty error (AWS rejects the call).
+//  2. After removing the object the bucket can be deleted successfully.
+//
+// The bucket is re-created at the end so the rest of the tests are unaffected.
+func testDeleteNonEmptyBucket(bucket string, svc *s3.S3) error {
+	const testKey = "delete-test-object"
+	const testBody = "delete-test-body"
+
+	// Put an object into the bucket so it is non-empty.
+	if _, err := svc.PutObject(&s3.PutObjectInput{
+		Body:   strings.NewReader(testBody),
+		Bucket: aws.String(bucket),
+		Key:    aws.String(testKey),
+	}); err != nil {
+		return fmt.Errorf("testDeleteNonEmptyBucket: put object: %w", err)
+	}
+
+	// Attempt to delete the non-empty bucket — expect a BucketNotEmpty error.
+	_, deleteErr := svc.DeleteBucket(&s3.DeleteBucketInput{
+		Bucket: aws.String(bucket),
+	})
+	if deleteErr == nil {
+		return fmt.Errorf("testDeleteNonEmptyBucket: expected BucketNotEmpty error but bucket was deleted successfully")
+	}
+	if awsErr, ok := deleteErr.(awserr.Error); !ok || awsErr.Code() != "BucketNotEmpty" {
+		return fmt.Errorf("testDeleteNonEmptyBucket: expected BucketNotEmpty error; got: %v", deleteErr)
+	}
+
+	// Remove the object so the bucket can be deleted.
+	if _, err := svc.DeleteObject(&s3.DeleteObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(testKey),
+	}); err != nil {
+		return fmt.Errorf("testDeleteNonEmptyBucket: delete object: %w", err)
+	}
+
+	// Wait until S3 confirms the object is gone before deleting the bucket.
+	if err := svc.WaitUntilObjectNotExists(&s3.HeadObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(testKey),
+	}); err != nil {
+		return fmt.Errorf("testDeleteNonEmptyBucket: wait for object deletion: %w", err)
+	}
+
+	// Now delete the (now-empty) bucket — this must succeed.
+	if _, err := svc.DeleteBucket(&s3.DeleteBucketInput{
+		Bucket: aws.String(bucket),
+	}); err != nil {
+		return fmt.Errorf("testDeleteNonEmptyBucket: delete empty bucket: %w", err)
+	}
+
+	// Re-create the bucket so subsequent tests continue to work.
+	if _, err := svc.CreateBucket(&s3.CreateBucketInput{
+		Bucket: aws.String(bucket),
+	}); err != nil {
+		return fmt.Errorf("testDeleteNonEmptyBucket: re-create bucket: %w", err)
 	}
 
 	return nil
