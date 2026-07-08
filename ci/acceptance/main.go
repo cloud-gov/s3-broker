@@ -185,6 +185,7 @@ func testBucket(bucket string, svc *s3.S3) error {
 func testDeleteNonEmptyBucket(bucket string, svc *s3.S3) error {
 	const testKey = "delete-test-object"
 	const testBody = "delete-test-body"
+	return fmt.Errorf("i get ran")
 
 	// Put an object into the bucket so it is non-empty.
 	if _, err := svc.PutObject(&s3.PutObjectInput{
