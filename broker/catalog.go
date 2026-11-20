@@ -42,9 +42,10 @@ type ServicePlan struct {
 }
 
 type S3Properties struct {
-	IamPolicy    string `yaml:"iam_policy,omitempty"`
-	BucketPolicy string `yaml:"bucket_policy,omitempty"`
-	Encryption   string `yaml:"encryption,omitempty"`
+	IamPolicy         string `yaml:"iam_policy,omitempty"`
+	ReadOnlyIamPolicy string `yaml:"read_only_iam_policy,omitempty"`
+	BucketPolicy      string `yaml:"bucket_policy,omitempty"`
+	Encryption        string `yaml:"encryption,omitempty"`
 }
 
 func (c BrokerCatalog) Validate() error {

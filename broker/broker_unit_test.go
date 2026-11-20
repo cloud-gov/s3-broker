@@ -76,8 +76,9 @@ func (b mockBucket) Delete(bucketName string, deleteObjects bool) error {
 }
 
 type mockCatalog struct {
-	serviceName string
-	planName    string
+	serviceName       string
+	planName          string
+	readOnlyIamPolicy string
 }
 
 func (c mockCatalog) Validate() error {
@@ -99,6 +100,9 @@ func (c mockCatalog) FindServicePlan(planID string) (plan ServicePlan, found boo
 	}
 	return ServicePlan{
 		Name: c.planName,
+		S3Properties: S3Properties{
+			ReadOnlyIamPolicy: c.readOnlyIamPolicy,
+		},
 	}, true
 }
 
@@ -815,6 +819,73 @@ func TestBind(t *testing.T) {
 					URI:               "s3://-binding1-0:@/",
 					AccessKeyID:       "-binding1-0",
 					AdditionalBuckets: []string{""},
+				},
+			},
+			expectUserExists: true,
+			expectPolicies:   []string{"-binding1"},
+		},
+		"read-only bind falls back to default policy when plan has none": {
+			instanceId: "instance1",
+			bindingId:  "binding1",
+			bindDetails: domain.BindDetails{
+				PlanID:        "planid1",
+				ServiceID:     "serviceid1",
+				RawParameters: json.RawMessage(`{"read_only": true}`),
+			},
+			broker: &S3Broker{
+				logger: logger,
+				bucket: &mockBucket{
+					describeDetails: awss3.BucketDetails{},
+				},
+				bucketPrefix: "test",
+				catalog: &mockCatalog{
+					planName:    "plan1",
+					serviceName: "service1",
+				},
+				tagManager: &mockTagGenerator{},
+				user:       &mockUser{},
+			},
+			expectAccessKeys: map[string][]string{"-binding1": {"-binding1-0"}},
+			expectBinding: domain.Binding{
+				Credentials: Credentials{
+					URI:               "s3://-binding1-0:@/",
+					AccessKeyID:       "-binding1-0",
+					AdditionalBuckets: []string{""},
+					ReadOnly:          true,
+				},
+			},
+			expectUserExists: true,
+			expectPolicies:   []string{"-binding1"},
+		},
+		"read-only bind success": {
+			instanceId: "instance1",
+			bindingId:  "binding1",
+			bindDetails: domain.BindDetails{
+				PlanID:        "planid1",
+				ServiceID:     "serviceid1",
+				RawParameters: json.RawMessage(`{"read_only": true}`),
+			},
+			broker: &S3Broker{
+				logger: logger,
+				bucket: &mockBucket{
+					describeDetails: awss3.BucketDetails{},
+				},
+				bucketPrefix: "test",
+				catalog: &mockCatalog{
+					planName:          "plan1",
+					serviceName:       "service1",
+					readOnlyIamPolicy: "fake-read-only-policy",
+				},
+				tagManager: &mockTagGenerator{},
+				user:       &mockUser{},
+			},
+			expectAccessKeys: map[string][]string{"-binding1": {"-binding1-0"}},
+			expectBinding: domain.Binding{
+				Credentials: Credentials{
+					URI:               "s3://-binding1-0:@/",
+					AccessKeyID:       "-binding1-0",
+					AdditionalBuckets: []string{""},
+					ReadOnly:          true,
 				},
 			},
 			expectUserExists: true,
