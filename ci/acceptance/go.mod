@@ -1,8 +1,6 @@
 module acceptance-test
 
-go 1.23.0
-
-toolchain go1.23.7
+go 1.25.0
 
 require (
 	github.com/aws/aws-sdk-go v1.55.5
@@ -12,5 +10,5 @@ require (
 require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/mitchellh/mapstructure v1.1.2 // indirect
-	golang.org/x/net v0.38.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
 )
