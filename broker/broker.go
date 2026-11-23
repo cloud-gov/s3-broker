@@ -26,45 +26,6 @@ const instanceIDLogKey = "instance-id"
 const bindingIDLogKey = "binding-id"
 const detailsLogKey = "details"
 const acceptsIncompleteLogKey = "acceptsIncomplete"
-const defaultReadOnlyIamPolicy = `{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": [
-        "s3:GetBucketAcl",
-        "s3:GetBucketCORS",
-        "s3:GetBucketLocation",
-        "s3:GetBucketLogging",
-        "s3:GetBucketNotification",
-        "s3:GetBucketPolicy",
-        "s3:GetBucketTagging",
-        "s3:GetBucketVersioning",
-        "s3:GetBucketWebsite",
-        "s3:GetEncryptionConfiguration",
-        "s3:GetLifecycleConfiguration",
-        "s3:ListBucket",
-        "s3:ListBucketMultipartUploads",
-        "s3:ListBucketVersions"
-      ],
-      "Effect": "Allow",
-      "Resource": {{resources ""}}
-    },
-    {
-      "Action": [
-        "s3:GetObject",
-        "s3:GetObjectAcl",
-        "s3:GetObjectTorrent",
-        "s3:GetObjectTagging",
-        "s3:GetObjectVersionTagging",
-        "s3:GetObjectVersion",
-        "s3:GetObjectVersionAcl",
-        "s3:GetObjectVersionTorrent"
-      ],
-      "Effect": "Allow",
-      "Resource": {{resources "/*"}}
-    }
-  ]
-}`
 
 var (
 	ErrNoClientConfigured = errors.New("This broker is not configured to support binding to additional instances. Contact your Cloud Foundry operator for details.")
@@ -358,7 +319,7 @@ func (b *S3Broker) Bind(
 	if bindParameters.ReadOnly {
 		iamPolicy = servicePlan.S3Properties.ReadOnlyIamPolicy
 		if iamPolicy == "" {
-			iamPolicy = defaultReadOnlyIamPolicy
+			return binding, fmt.Errorf("Service Plan '%s' does not support read-only bindings: no read_only_iam_policy is configured", details.PlanID)
 		}
 	}
 

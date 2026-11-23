@@ -824,7 +824,7 @@ func TestBind(t *testing.T) {
 			expectUserExists: true,
 			expectPolicies:   []string{"-binding1"},
 		},
-		"read-only bind falls back to default policy when plan has none": {
+		"read-only bind fails when plan has no read-only policy configured": {
 			instanceId: "instance1",
 			bindingId:  "binding1",
 			bindDetails: domain.BindDetails{
@@ -845,17 +845,8 @@ func TestBind(t *testing.T) {
 				tagManager: &mockTagGenerator{},
 				user:       &mockUser{},
 			},
-			expectAccessKeys: map[string][]string{"-binding1": {"-binding1-0"}},
-			expectBinding: domain.Binding{
-				Credentials: Credentials{
-					URI:               "s3://-binding1-0:@/",
-					AccessKeyID:       "-binding1-0",
-					AdditionalBuckets: []string{""},
-					ReadOnly:          true,
-				},
-			},
-			expectUserExists: true,
-			expectPolicies:   []string{"-binding1"},
+			expectErr:     NewTestErr("Service Plan 'planid1' does not support read-only bindings: no read_only_iam_policy is configured"),
+			expectBinding: domain.Binding{},
 		},
 		"read-only bind success": {
 			instanceId: "instance1",
