@@ -185,7 +185,6 @@ func testBucket(bucket string, svc *s3.S3) error {
 func testDeleteNonEmptyBucket(bucket string, svc *s3.S3) error {
 	const testKey = "delete-test-object"
 	const testBody = "delete-test-body"
-	return fmt.Errorf("i get ran")
 
 	// Put an object into the bucket so it is non-empty.
 	if _, err := svc.PutObject(&s3.PutObjectInput{
@@ -207,6 +206,22 @@ func testDeleteNonEmptyBucket(bucket string, svc *s3.S3) error {
 		return fmt.Errorf("testDeleteNonEmptyBucket: expected BucketNotEmpty error; got: %v", deleteErr)
 	}
 	log.Printf("testDeleteNonEmptyBucket: PASS — bucket %q correctly rejected deletion while non-empty", bucket)
+
+	// Remove the object so the bucket can be deleted.
+	if _, err := svc.DeleteObject(&s3.DeleteObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(testKey),
+	}); err != nil {
+		return fmt.Errorf("testDeleteNonEmptyBucket: delete object: %w", err)
+	}
+
+	// Wait until S3 confirms the object is gone before deleting the bucket.
+	if err := svc.WaitUntilObjectNotExists(&s3.HeadObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(testKey),
+	}); err != nil {
+		return fmt.Errorf("testDeleteNonEmptyBucket: wait for object deletion: %w", err)
+	}
 
 	// Now delete the (now-empty) bucket — this must succeed.
 	if _, err := svc.DeleteBucket(&s3.DeleteBucketInput{
