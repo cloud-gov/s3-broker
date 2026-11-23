@@ -318,9 +318,14 @@ func (b *S3Broker) Bind(
 	iamPolicy := servicePlan.S3Properties.IamPolicy
 	if bindParameters.ReadOnly {
 		iamPolicy = servicePlan.S3Properties.ReadOnlyIamPolicy
-		if iamPolicy == "" {
-			return binding, fmt.Errorf("Service Plan '%s' does not support read-only bindings: no read_only_iam_policy is configured", details.PlanID)
+    }
+    
+	if iamPolicy == "" {
+  	  if bindParameters.ReadOnly { 
+        return binding, fmt.Errorf("no read-only IAM policy is configured for service plan '%s'", details.PlanID)
 		}
+        return binding, fmt.Errorf("no IAM policy is configured for service plan '%s'", details.PlanID)
+		}		
 	}
 
 	service, ok := b.catalog.FindService(details.ServiceID)
