@@ -78,6 +78,7 @@ func (b mockBucket) Delete(bucketName string, deleteObjects bool) error {
 type mockCatalog struct {
 	serviceName       string
 	planName          string
+	iamPolicy         string
 	readOnlyIamPolicy string
 }
 
@@ -98,9 +99,14 @@ func (c mockCatalog) FindServicePlan(planID string) (plan ServicePlan, found boo
 	if c.planName == "" {
 		return ServicePlan{}, false
 	}
+	iamPolicy := c.iamPolicy
+	if iamPolicy == "" {
+		iamPolicy = "fake-iam-policy"
+	}
 	return ServicePlan{
 		Name: c.planName,
 		S3Properties: S3Properties{
+			IamPolicy:         iamPolicy,
 			ReadOnlyIamPolicy: c.readOnlyIamPolicy,
 		},
 	}, true
@@ -845,7 +851,7 @@ func TestBind(t *testing.T) {
 				tagManager: &mockTagGenerator{},
 				user:       &mockUser{},
 			},
-			expectErr:     NewTestErr("Service Plan 'planid1' does not support read-only bindings: no read_only_iam_policy is configured"),
+			expectErr:     NewTestErr("no read-only IAM policy is configured for service plan 'planid1'"),
 			expectBinding: domain.Binding{},
 		},
 		"read-only bind success": {
