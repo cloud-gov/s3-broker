@@ -10,6 +10,8 @@ type BindParameters struct {
 	// files between buckets. The contents should be a list of service
 	// instance names.
 	AdditionalInstances []string `json:"additional_instances"`
+
+	ReadOnly bool `json:"read_only"`
 }
 
 type UpdateParameters struct {

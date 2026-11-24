@@ -63,6 +63,7 @@ type Credentials struct {
 	Endpoint           string   `json:"endpoint"`
 	FIPSEndpoint       string   `json:"fips_endpoint"`
 	AdditionalBuckets  []string `json:"additional_buckets"`
+	ReadOnly           bool     `json:"read_only"`
 }
 
 func New(
@@ -314,6 +315,18 @@ func (b *S3Broker) Bind(
 		return binding, fmt.Errorf("Service Plan '%s' not found", details.PlanID)
 	}
 
+	iamPolicy := servicePlan.S3Properties.IamPolicy
+	if bindParameters.ReadOnly {
+		iamPolicy = servicePlan.S3Properties.ReadOnlyIamPolicy
+	}
+
+	if iamPolicy == "" {
+		if bindParameters.ReadOnly {
+			return binding, fmt.Errorf("no read-only IAM policy is configured for service plan '%s'", details.PlanID)
+		}
+		return binding, fmt.Errorf("no IAM policy is configured for service plan '%s'", details.PlanID)
+	}
+
 	service, ok := b.catalog.FindService(details.ServiceID)
 	if !ok {
 		return binding, fmt.Errorf("Service '%s' not found", details.ServiceID)
@@ -343,7 +356,7 @@ func (b *S3Broker) Bind(
 		bucketNames = append(bucketNames, additionalNames...)
 	}
 
-	credentials := Credentials{AdditionalBuckets: []string{}}
+	credentials := Credentials{AdditionalBuckets: []string{}, ReadOnly: bindParameters.ReadOnly}
 	bucketARNs := make([]string, len(bucketNames))
 	detailc, errc := make(chan awss3.BucketDetails), make(chan error)
 	for _, bucketName := range bucketNames {
@@ -449,7 +462,7 @@ func (b *S3Broker) Bind(
 	policyARN, err = b.user.CreatePolicy(
 		b.policyName(bindingID),
 		b.iamPath,
-		string(servicePlan.S3Properties.IamPolicy),
+		string(iamPolicy),
 		bucketARNs,
 		iamTags,
 	)

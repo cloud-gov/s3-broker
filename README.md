@@ -65,6 +65,16 @@ If the operator provides credentials for a Cloud Foundry user or client with the
 cf bind-service my-app my-s3-instance -c '{"additional_instances": ["my-additional-s3-instance"]}'
 ```
 
+#### Creating read-only credentials
+
+Users can request credentials that can only read objects from the bucket (and
+any `additional_instances`), not write or delete them, by passing the
+`read_only` bind parameter:
+
+```sh
+cf create-service-key my-s3-instance my-read-only-key -c '{"read_only": true}'
+```
+
 ## Contributing
 
 In the spirit of [free software](http://www.fsf.org/licensing/essays/free-sw.html), **everyone** is encouraged to help improve this project.

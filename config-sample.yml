@@ -93,6 +93,42 @@ s3_config:
                 }
               ]
             }
+          read_only_iam_policy: &read-only-iam-policy |-
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Action": [
+                    "s3:GetBucketAcl",
+                    "s3:GetBucketCORS",
+                    "s3:GetBucketLocation",
+                    "s3:GetBucketLogging",
+                    "s3:GetBucketNotification",
+                    "s3:GetBucketPolicy",
+                    "s3:GetBucketTagging",
+                    "s3:GetBucketVersioning",
+                    "s3:GetBucketWebsite",
+                    "s3:ListBucket",
+                    "s3:ListBucketMultipartUploads",
+                    "s3:ListBucketVersions"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": {{resources ""}}
+                },
+                {
+                  "Action": [
+                    "s3:GetObject",
+                    "s3:GetObjectAcl",
+                    "s3:GetObjectTorrent",
+                    "s3:GetObjectVersion",
+                    "s3:GetObjectVersionAcl",
+                    "s3:GetObjectVersionTorrent"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": {{resources "/*"}}
+                }
+              ]
+            }
       - id: 16A19515-C2B9-4982-80BD-69BED6A86C85
         name: public
         description: Provides a single publicly accessible S3 bucket with unlimited
@@ -109,6 +145,7 @@ s3_config:
             unit: Per GB
         s3_properties:
           iam_policy: *iam-policy
+          read_only_iam_policy: *read-only-iam-policy
           bucket_policy: |-
             {
               "Version": "2012-10-17",
